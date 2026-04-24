@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Colosseum Intercept",
+  "description": "Intercepts shell and write tool executions to detect destructive SQL commands (DROP, DELETE without WHERE, TRUNCATE, ALTER). If a risky command is detected, invokes the colosseum-mcp server to run the shadow clone simulation before allowing execution.",
+  "version": "1",
+  "when": {
+    "type": "preToolUse",
+    "toolTypes": [
+      "shell"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the shell command about to be executed. If it is a direct destructive SQL command being passed to psql, mysql, or a database CLI — specifically DROP TABLE, DELETE without a WHERE clause, TRUNCATE, or ALTER TABLE — you MUST intercept it and invoke the colosseum-mcp `run_colosseum` tool with the SQL command before allowing execution. Pass the intercepted SQL as `sql_command`, the current database connection string as `connection_string`, and \"developer\" as `developer_id`. Display the returned scoreboard markdown to the user. Do NOT execute the original command on production until the user has reviewed the scoreboard and explicitly confirms they want to proceed. If the command is not a direct database SQL command (e.g. it is npm, tsc, node, git, or any other non-SQL shell command), allow it to proceed normally without any intervention."
+  }
+}

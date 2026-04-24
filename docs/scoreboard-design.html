@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiro Safety Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* === REFERENCE DESIGN — DO NOT EDIT MANUALLY ===
+   This file is the source of truth for the colosseum-cli HTML renderer.
+   The CLI generates scoreboard HTML by injecting real data into this template.
+   Template variables use {{VARIABLE_NAME}} syntax.
+*/
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --red: #ff3b3b; --red-dim: rgba(255,59,59,0.12); --red-border: rgba(255,59,59,0.3);
+  --amber: #f59e0b; --green: #10b981; --bg: #080a0d; --surface: #0e1117;
+  --surface2: #141720; --border: rgba(255,255,255,0.07); --text: #e2e8f0;
+  --muted: #4a5568; --mono: 'JetBrains Mono', monospace; --display: 'Syne', sans-serif;
+}
+body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; overflow: hidden; }
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: linear-gradient(rgba(255,59,59,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,59,59,0.03) 1px, transparent 1px);
+  background-size: 40px 40px; pointer-events: none; z-index: 0;
+}
+.dashboard { position: fixed; inset: 0; display: grid; grid-template-rows: 48px 1fr; z-index: 1; transition: filter 0.6s ease, opacity 0.6s ease; }
+.dashboard.blurred { filter: blur(8px) brightness(0.3); }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.topbar-logo { font-family: var(--display); font-size: 15px; color: #fff; letter-spacing: -0.01em; }
+.topbar-logo span { color: var(--red); }
+.status-pill { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.1em; color: var(--green); background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); padding: 3px 10px; border-radius: 20px; }
+.status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+.topbar-right { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; }
+.dash-body { display: grid; grid-template-columns: 240px 1fr 240px; gap: 0; overflow: hidden; }
+.dash-panel { border-right: 1px solid var(--border); padding: 20px; overflow: hidden; }
+.dash-panel:last-child { border-right: none; border-left: 1px solid var(--border); }
+.panel-label { font-size: 9px; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 16px; }
+.log-line { display: flex; gap: 8px; margin-bottom: 6px; font-size: 10px; color: var(--muted); line-height: 1.4; opacity: 0; animation: fadeRow 0.3s ease forwards; }
+.log-line .ts { color: #2d3748; flex-shrink: 0; }
+.log-line .ok { color: var(--green); }
+.log-line .warn { color: var(--amber); }
+.metric-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+.metric-card .lbl { font-size: 9px; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 6px; }
+.metric-card .val { font-size: 22px; font-weight: 700; color: var(--green); }
+.metric-card .sub { font-size: 9px; color: var(--muted); margin-top: 3px; }
+.dash-main { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.fake-terminal { background: #050608; border: 1px solid var(--border); border-radius: 10px; padding: 16px; font-size: 12px; line-height: 1.8; height: 100%; }
+.ft-bar { display: flex; gap: 6px; margin-bottom: 14px; }
+.ft-dot { width: 11px; height: 11px; border-radius: 50%; }
+.ft-dot.r { background: #ff5f57; } .ft-dot.y { background: #febc2e; } .ft-dot.g { background: #28c840; }
+.ft-line { color: var(--muted); }
+.ft-line .p { color: var(--green); }
+.ft-line .cmd { color: #fff; }
+.ft-line .danger { color: var(--red); }
+.cursor { display: inline-block; width: 8px; height: 14px; background: var(--text); animation: blink 1s step-end infinite; vertical-align: middle; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+.overlay.visible { opacity: 1; pointer-events: all; }
+.overlay::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px); pointer-events: none; z-index: 1; }
+.modal { position: relative; z-index: 2; width: min(680px, 92vw); max-height: 88vh; overflow-y: auto; background: #0a0c10; border: 1px solid var(--red-border); border-radius: 14px; box-shadow: 0 0 0 1px rgba(255,59,59,0.08), 0 40px 80px rgba(0,0,0,0.8); transform: scale(0.88) translateY(30px); transition: transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.35s ease; opacity: 0; scrollbar-width: thin; scrollbar-color: #1e2530 transparent; }
+.overlay.visible .modal { transform: scale(1) translateY(0); opacity: 1; }
+@keyframes glitch-border {
+  0%,100% { border-color: var(--red-border); box-shadow: 0 0 0 1px rgba(255,59,59,0.08), 0 40px 80px rgba(0,0,0,0.8); }
+  10% { border-color: rgba(255,59,59,0.9); box-shadow: 0 0 32px rgba(255,59,59,0.4), 0 40px 80px rgba(0,0,0,0.8); }
+  12% { border-color: var(--red-border); }
+  14% { border-color: rgba(255,59,59,0.7); box-shadow: 0 0 20px rgba(255,59,59,0.3), 0 40px 80px rgba(0,0,0,0.8); }
+  16% { border-color: var(--red-border); }
+}
+.overlay.visible .modal { animation: glitch-border 1.2s ease 0.4s 1; }
+.modal-chrome { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: #080a0e; border-bottom: 1px solid rgba(255,59,59,0.15); border-radius: 14px 14px 0 0; position: sticky; top: 0; z-index: 10; }
+.modal-dots { display: flex; gap: 7px; }
+.modal-dots span { width: 12px; height: 12px; border-radius: 50%; }
+.modal-dots .r { background: #ff5f57; } .modal-dots .y { background: #febc2e; } .modal-dots .g { background: #28c840; }
+.modal-chrome-title { font-size: 10px; color: #2d3748; letter-spacing: 0.1em; }
+.modal-chrome-badge { font-size: 9px; letter-spacing: 0.12em; color: var(--red); background: var(--red-dim); border: 1px solid var(--red-border); padding: 3px 8px; border-radius: 4px; }
+.modal-body { padding: 28px 32px 32px; }
+@keyframes glitch-text {
+  0%,90%,100% { transform: translate(0); clip-path: none; }
+  91% { transform: translate(-3px,0); clip-path: inset(30% 0 50% 0); }
+  93% { transform: translate(3px,0); clip-path: inset(60% 0 20% 0); }
+  95% { transform: translate(-2px,0); clip-path: none; }
+}
+.go-eyebrow { font-size: 10px; letter-spacing: 0.2em; color: var(--red); margin-bottom: 10px; opacity: 0; animation: fadeIn 0.3s ease 0.5s forwards; }
+.go-title { font-family: var(--display); font-size: 52px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: -0.03em; margin-bottom: 4px; opacity: 0; animation: titleIn 0.5s cubic-bezier(0.22,1,0.36,1) 0.6s forwards; }
+.go-title .red { color: var(--red); animation: glitch-text 4s ease 2s infinite; display: inline-block; }
+.go-cmd-line { font-size: 12px; color: var(--muted); margin-bottom: 24px; opacity: 0; animation: fadeIn 0.3s ease 0.9s forwards; }
+.go-cmd-line code { color: var(--red); background: var(--red-dim); padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+.go-sep { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 20px 0; }
+.section-lbl { font-size: 9px; letter-spacing: 0.2em; color: var(--muted); margin-bottom: 14px; }
+.timeline { display: flex; flex-direction: column; opacity: 0; animation: fadeIn 0.4s ease 1.1s forwards; }
+.tl-row { display: flex; align-items: flex-start; gap: 14px; padding: 7px 0; }
+.tl-icon-wrap { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.tl-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+.tl-icon.ok { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: var(--green); }
+.tl-icon.warn { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: var(--amber); }
+.tl-icon.err { background: rgba(255,59,59,0.15); border: 1px solid var(--red-border); color: var(--red); }
+.tl-track { width: 1px; flex: 1; background: rgba(255,255,255,0.04); min-height: 16px; margin: 3px 0; }
+.tl-content { flex: 1; padding-bottom: 4px; }
+.tl-title { font-size: 12px; color: var(--text); margin-bottom: 2px; }
+.tl-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.tl-time { font-size: 10px; color: #2d3748; flex-shrink: 0; padding-top: 3px; }
+.metrics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; opacity: 0; animation: slideUp 0.4s ease 1.4s forwards; }
+.mcard { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.mcard .ml { font-size: 9px; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 7px; }
+.mcard .mv { font-size: 24px; font-weight: 700; line-height: 1; }
+.mcard .mu { font-size: 9px; color: var(--muted); margin-top: 4px; }
+.mv.red { color: var(--red); } .mv.amber { color: var(--amber); } .mv.green { color: var(--green); }
+/* Gladiator cards — 5 per row */
+.gladiator-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; opacity: 0; animation: slideUp 0.4s ease 1.5s forwards; }
+.gcard { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+.gcard.killed { border-color: var(--red-border); background: var(--red-dim); }
+.gcard.survived { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.05); }
+.gcard-icon { font-size: 18px; margin-bottom: 6px; }
+.gcard-name { font-size: 9px; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 4px; }
+.gcard-status { font-size: 10px; font-weight: 700; }
+.gcard.killed .gcard-status { color: var(--red); }
+.gcard.survived .gcard-status { color: var(--green); }
+.gcard-sev { font-size: 9px; color: var(--muted); margin-top: 3px; }
+.cmd-replay { background: #040507; border: 1px solid rgba(255,255,255,0.05); border-left: 2px solid var(--red); border-radius: 8px; padding: 14px 16px; margin-top: 4px; opacity: 0; animation: slideUp 0.4s ease 1.6s forwards; }
+.cr-label { font-size: 9px; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 10px; }
+.cr-prompt { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.cr-sym { color: var(--red); font-size: 13px; }
+.cr-cmd { font-size: 12px; }
+.cr-cmd .kw { color: var(--red); }
+.cr-cmd .tbl { color: var(--amber); }
+.cr-result { font-size: 11px; color: var(--muted); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; line-height: 1.8; }
+.cr-result .hit { color: var(--green); }
+.cr-result .miss { color: var(--red); }
+.learn-box { background: rgba(255,59,59,0.05); border: 1px solid rgba(255,59,59,0.18); border-radius: 8px; padding: 16px; opacity: 0; animation: slideUp 0.4s ease 1.8s forwards; }
+.lb-title { font-size: 10px; letter-spacing: 0.12em; color: var(--red); margin-bottom: 12px; }
+.lb-items { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.lb-items li { font-size: 11px; color: var(--muted); padding-left: 18px; position: relative; line-height: 1.5; }
+.lb-items li::before { content: '→'; position: absolute; left: 0; color: #2d3748; }
+.lb-items li strong { color: #94a3b8; font-weight: 400; }
+.modal-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.06); opacity: 0; animation: fadeIn 0.4s ease 2s forwards; }
+.mf-left { font-size: 10px; color: #2d3748; letter-spacing: 0.06em; line-height: 1.6; }
+.mf-left span { display: block; }
+.mf-right { display: flex; gap: 10px; }
+.btn { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; padding: 9px 16px; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: var(--muted); transition: all 0.15s; }
+.btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+.btn.primary { background: var(--red-dim); border-color: var(--red-border); color: var(--red); }
+.btn.primary:hover { background: rgba(255,59,59,0.2); }
+.demo-trigger { position: fixed; bottom: 28px; right: 28px; z-index: 50; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; padding: 12px 20px; border-radius: 8px; cursor: pointer; background: var(--red-dim); border: 1px solid var(--red-border); color: var(--red); transition: all 0.15s; }
+.demo-trigger:hover { background: rgba(255,59,59,0.2); transform: translateY(-1px); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes titleIn { from{opacity:0;transform:translateY(20px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+@keyframes fadeRow { from{opacity:0;transform:translateX(-6px)} to{opacity:0.85;transform:translateX(0)} }
+.flash { position: fixed; inset: 0; background: var(--red); z-index: 200; opacity: 0; pointer-events: none; }
+.flash.go { animation: flash-anim 0.5s ease forwards; }
+@keyframes flash-anim { 0%{opacity:0.5} 30%{opacity:0.15} 60%{opacity:0.3} 100%{opacity:0} }
+</style>
+</head>
+<body>
+<div class="flash" id="flash"></div>
+
+<!-- DASHBOARD BACKGROUND -->
+<div class="dashboard" id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">KIRO <span>SAFETY</span></div>
+      <div class="status-pill">ALL SYSTEMS NOMINAL</div>
+    </div>
+    <div class="topbar-right">MONITORING SESSION #{{SESSION_ID}} &nbsp;|&nbsp; PROD ENV</div>
+  </div>
+  <div class="dash-body">
+    <div class="dash-panel">
+      <div class="panel-label">LIVE COMMAND LOG</div>
+      <div id="log-container"></div>
+    </div>
+    <div class="dash-main">
+      <div class="fake-terminal">
+        <div class="ft-bar">
+          <div class="ft-dot r"></div><div class="ft-dot y"></div><div class="ft-dot g"></div>
+        </div>
+        <div class="ft-line"><span class="p">→</span> {{TERMINAL_CMD}}</div>
+        <div class="ft-line" style="color:#2d3748">{{TERMINAL_CONTEXT}}</div>
+        <div class="ft-line" style="margin-top:8px">
+          <span class="p">{{DB_PROMPT}}</span>
+          <span class="danger cmd">{{INTERCEPTED_CMD}}</span>
+        </div>
+        <div class="ft-line" style="color:#2d3748" id="drop-response"></div>
+        <div class="ft-line" id="cursor-line" style="display:none">
+          <span class="p">{{DB_PROMPT}}</span> <span class="cursor"></span>
+        </div>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <div class="panel-label">ENVIRONMENT STATUS</div>
+      <div class="metric-card">
+        <div class="lbl">INTERCEPTED TODAY</div>
+        <div class="val">{{INTERCEPTED_COUNT}}</div>
+        <div class="sub">destructive commands</div>
+      </div>
+      <div class="metric-card">
+        <div class="lbl">SHADOW BRANCHES</div>
+        <div class="val" style="color:var(--amber)">{{BRANCH_COUNT}}</div>
+        <div class="sub">active forks</div>
+      </div>
+      <div class="metric-card">
+        <div class="lbl">PROD DB STATE</div>
+        <div class="val">OK</div>
+        <div class="sub">last checked 0s ago</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY + MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <div class="modal-chrome">
+      <div class="modal-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="modal-chrome-title">KIRO — INCIDENT_REPORT_{{SESSION_ID}}</div>
+      <div class="modal-chrome-badge">SIMULATED</div>
+    </div>
+    <div class="modal-body">
+      <div class="go-eyebrow">// SAFETY INTERCEPT TRIGGERED</div>
+      <div class="go-title">GAME <span class="red">OVER</span></div>
+      <div class="go-cmd-line">
+        You executed <code>{{INTERCEPTED_CMD}}</code> &nbsp;—&nbsp; against a shadow clone, not production.
+      </div>
+
+      <hr class="go-sep">
+      <div class="section-lbl">WHAT HAPPENED IN THE LAST {{ELAPSED_TIME}}s</div>
+      <div class="timeline">{{TIMELINE_ROWS}}</div>
+
+      <hr class="go-sep">
+      <div class="section-lbl">REAL-WORLD BLAST RADIUS (AVERTED)</div>
+      <div class="metrics-grid">
+        <div class="mcard"><div class="ml">USERS AFFECTED</div><div class="mv red">{{USERS_AFFECTED}}</div><div class="mu">active accounts</div></div>
+        <div class="mcard"><div class="ml">RECOVERY COST</div><div class="mv amber">{{RECOVERY_COST}}</div><div class="mu">estimated incident cost</div></div>
+        <div class="mcard"><div class="ml">ACTUAL DOWNTIME</div><div class="mv green">0 hrs</div><div class="mu">shadow mode protected you</div></div>
+      </div>
+
+      <hr class="go-sep">
+      <div class="section-lbl">GLADIATOR RESULTS</div>
+      <div class="gladiator-grid">{{GLADIATOR_CARDS}}</div>
+
+      <hr class="go-sep">
+      <div class="section-lbl">COMMAND REPLAY</div>
+      <div class="cmd-replay">
+        <div class="cr-label">WHAT YOUR TERMINAL SHOWED YOU</div>
+        <div class="cr-prompt">
+          <span class="cr-sym">$</span>
+          <span class="cr-cmd"><span class="kw">{{CMD_KW}}</span> <span class="tbl">{{CMD_TARGET}}</span>;</span>
+        </div>
+        <div class="cr-result">
+          → Executed against: <span class="hit">shadow/{{BRANCH_ID}}</span><br>
+          → Production: <span class="hit">intact — {{ROWS_SAFE}} rows safe</span><br>
+          → Shadow branch: <span class="miss">destroyed and archived</span>
+        </div>
+      </div>
+
+      <hr class="go-sep">
+      <div class="section-lbl">HOW TO NOT DO THIS AGAIN</div>
+      <div class="learn-box">
+        <div class="lb-title">// PREVENTION CHECKLIST</div>
+        <ul class="lb-items">{{PREVENTION_ITEMS}}</ul>
+      </div>
+
+      <div class="modal-footer">
+        <div class="mf-left">
+          <span>KIRO SAFETY LAYER — SHADOW MODE ACTIVE</span>
+          <span style="color:#1a2035">INCIDENT #{{SESSION_ID}} — LOGGED — PROD PROTECTED</span>
+        </div>
+        <div class="mf-right">
+          <button class="btn" onclick="closeModal()">DISMISS</button>
+          <button class="btn primary">LEARN MORE ↗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="demo-trigger" id="trigger-btn" onclick="triggerIncident()">▶ &nbsp;SIMULATE INCIDENT</button>
+
+<script>
+const SESSION_DATA = {{SESSION_DATA_JSON}};
+const logs = SESSION_DATA.logs || [];
+const logContainer = document.getElementById('log-container');
+
+function addLog(entry, delay) {
+  setTimeout(() => {
+    const el = document.createElement('div');
+    el.className = 'log-line';
+    el.style.animationDelay = '0s';
+    el.innerHTML = `<span class="ts">${entry.t}</span><span class="${entry.cls}">${entry.msg}</span>`;
+    logContainer.appendChild(el);
+  }, delay);
+}
+
+logs.forEach((l, i) => addLog(l, i * 600));
+
+function triggerIncident() {
+  document.getElementById('trigger-btn').style.display = 'none';
+  setTimeout(() => { document.getElementById('drop-response').textContent = SESSION_DATA.cmdResult || 'executed'; }, 300);
+  setTimeout(() => { document.getElementById('cursor-line').style.display = 'block'; }, 700);
+  setTimeout(() => { document.getElementById('flash').classList.add('go'); }, 900);
+  setTimeout(() => {
+    (SESSION_DATA.interceptLogs || []).forEach((l, i) => addLog(l, i * 400));
+  }, 1000);
+  setTimeout(() => {
+    document.getElementById('dashboard').classList.add('blurred');
+    document.getElementById('overlay').classList.add('visible');
+  }, 1400);
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('visible');
+  document.getElementById('dashboard').classList.remove('blurred');
+  setTimeout(() => {
+    document.getElementById('trigger-btn').style.display = 'block';
+    document.getElementById('drop-response').textContent = '';
+    document.getElementById('cursor-line').style.display = 'none';
+  }, 400);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Colosseum Code Scanner",
+  "description": "Scans edited source files (.ts, .js, .py, .env) for security vulnerabilities using the colosseum-mcp scan_file tool. Displays a gamified vulnerability report to the developer after every save.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.ts",
+      "**/*.js",
+      "**/*.py",
+      "**/*.env"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file was just edited. Read the full content of the edited file and invoke the colosseum-mcp `scan_file` tool with the file_path (the path of the edited file) and file_content (the full text content of the file). Display the returned markdown_report to the developer so they can see any security vulnerabilities found. Do not modify the file or attempt to fix any vulnerabilities — only report what was found."
+  }
+}
