@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Colosseum — Game Over</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+button { cursor: pointer; font-family: inherit; background: none; border: none; }
+a { text-decoration: none; color: inherit; }
+
+/* ─── DESIGN TOKENS ─────────────────────────────────────── */
+:root {
+  --void:      #040507;
+  --bg:        #080a0d;
+  --surface:   #0e1117;
+  --surface-2: #141720;
+  --surface-3: #1a1f2b;
+  --red:       #ff3b3b;
+  --amber:     #f59e0b;
+  --green:     #10b981;
+  --text:      #e2e8f0;
+  --text-bright: #ffffff;
+  --text-sub:  #94a3b8;
+  --muted:     #4a5568;
+  --border:    rgba(255,255,255,0.07);
+  --border-red: rgba(255,59,59,0.3);
+}
+
+/* ─── BASE ───────────────────────────────────────────────── */
+html, body {
+  min-height: 100%;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(255,59,59,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,59,59,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── TOPBAR ─────────────────────────────────────────────── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  background: rgba(8,10,13,0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 100;
+}
+.wordmark {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: var(--text-bright);
+}
+.wordmark span { color: var(--red); }
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.status-pill .dot { font-size: 8px; }
+
+/* ─── SCREENS ────────────────────────────────────────────── */
+.screen {
+  display: none;
+  min-height: 100vh;
+  padding-top: 48px;
+}
+.screen.active {
+  display: block;
+}
+.screen.fade-in {
+  animation: screenFadeIn 300ms ease forwards;
+}
+@keyframes screenFadeIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── LAYOUT HELPERS ─────────────────────────────────────── */
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+.container-wide {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ─── LABEL STYLE ────────────────────────────────────────── */
+.label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.label-red {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.label-amber {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+/* ─── GLITCH ANIMATION ───────────────────────────────────── */
+@keyframes glitch-text {
+  0%   { transform: translateX(0);    clip-path: none; }
+  91%  { transform: translateX(-3px); clip-path: inset(30% 0 50% 0); }
+  93%  { transform: translateX(3px);  clip-path: inset(60% 0 20% 0); }
+  95%  { transform: translateX(-2px); clip-path: none; }
+  100% { transform: translateX(0);    clip-path: none; }
+}
+.glitch {
+  display: inline-block;
+  animation: glitch-text 4s infinite;
+}
+
+@keyframes glitch-border {
+  0%   { border-color: var(--border-red); }
+  20%  { border-color: rgba(255,59,59,0.9); }
+  40%  { border-color: var(--border-red); }
+  60%  { border-color: rgba(255,59,59,0.9); }
+  80%  { border-color: var(--border-red); }
+  100% { border-color: var(--border-red); }
+}
+.glitch-border-once {
+  animation: glitch-border 1.2s ease forwards;
+}
+
+/* ─── ENTRY ANIMATIONS ───────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInX {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.anim-hidden { opacity: 0; }
+.anim-fade-in  { animation: fadeIn  400ms ease forwards; }
+.anim-slide-up { animation: slideUp 400ms ease forwards; }
+.anim-slide-x  { animation: slideInX 300ms ease forwards; }
+
+/* ─── SCREEN 1: ARENA ────────────────────────────────────── */
+#screen-arena .hero {
+  text-align: center;
+  padding-top: 80px;
+  padding-bottom: 40px;
+}
+.eyebrow {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 16px;
+}
+.hero-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 52px;
+  letter-spacing: -0.03em;
+  color: var(--text-bright);
+  line-height: 1.05;
+  margin-bottom: 16px;
+}
+.hero-subtitle {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 40px;
+}
+
+/* Command replay box */
+.command-box {
+  max-width: 600px;
+  margin: 0 auto 32px;
+  background: var(--void);
+  border: 1px solid var(--border-red);
+  border-left: 2px solid var(--red);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+.command-box .label-red { margin-bottom: 8px; display: block; }
+.command-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-bright);
+}
+.command-text .cmd-table { color: var(--amber); }
+
+/* Severity bar */
+.severity-wrap {
+  max-width: 600px;
+  margin: 0 auto 32px;
+}
+.severity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.severity-score {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--red);
+}
+.bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 1.2s ease;
+}
+.bar-fill-red {
+  background: linear-gradient(90deg, var(--red), var(--amber));
+}
+.bar-fill-amber {
+  background: var(--amber);
+}
+
+/* Gladiator rows */
+.gladiators {
+  max-width: 600px;
+  margin: 0 auto 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gladiator-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.gladiator-row:hover { background: var(--surface-3); }
+.gladiator-row.killed { border-left: 2px solid var(--red); }
+.gladiator-row.survived { border-left: 2px solid var(--green); }
+
+.status-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.status-circle.killed {
+  background: rgba(255,59,59,0.15);
+  color: var(--red);
+}
+.status-circle.survived {
+  background: rgba(16,185,129,0.15);
+  color: var(--green);
+}
+.gladiator-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-bright);
+  min-width: 160px;
+  flex-shrink: 0;
+}
+.gladiator-finding {
+  font-size: 11px;
+  color: var(--text-sub);
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.badge {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 2px 8px;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+.badge-killed {
+  background: rgba(255,59,59,0.12);
+  border-color: rgba(255,59,59,0.3);
+  color: var(--red);
+}
+.badge-survived {
+  background: rgba(16,185,129,0.12);
+  border-color: rgba(16,185,129,0.3);
+  color: var(--green);
+}
+.gladiator-score {
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.score-killed  { color: var(--red); }
+.score-survived { color: var(--green); }
+
+/* Metric tiles */
+.metric-tiles {
+  max-width: 600px;
+  margin: 0 auto 32px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.metric-tile {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.metric-tile .label { display: block; margin-bottom: 8px; }
+.metric-value {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.metric-value.red   { color: var(--red); }
+.metric-value.green { color: var(--green); }
+.metric-unit {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Section divider */
+.section-divider {
+  max-width: 600px;
+  margin: 0 auto 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.divider-text {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  padding: 10px 24px;
+  border: 1px solid;
+  transition: background 150ms;
+  cursor: pointer;
+}
+.btn-red {
+  background: rgba(255,59,59,0.12);
+  border-color: rgba(255,59,59,0.3);
+  color: var(--red);
+}
+.btn-red:hover { background: rgba(255,59,59,0.20); }
+.btn-ghost {
+  background: transparent;
+  border-color: rgba(255,255,255,0.07);
+  color: var(--text-sub);
+}
+.btn-ghost:hover {
+  border-color: rgba(255,255,255,0.2);
+  color: var(--text-bright);
+}
+.btn-full { width: 100%; }
+
+.arena-cta {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* ─── SCREEN 2: LEARN ────────────────────────────────────── */
+#screen-learn .learn-header {
+  padding-top: 32px;
+  margin-bottom: 28px;
+}
+.back-btn {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 16px;
+  display: inline-block;
+  transition: color 150ms;
+}
+.back-btn:hover { color: var(--text-bright); }
+.learn-subtitle {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 6px;
+}
+
+/* XP bar */
+.xp-wrap {
+  margin-bottom: 28px;
+}
+.xp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.xp-score {
+  font-size: 12px;
+  color: var(--text-bright);
+}
+.streak-display {
+  display: none;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.streak-display.visible { display: inline; }
+
+/* Progress trail */
+.progress-trail {
+  display: flex;
+  align-items: center;
+  margin-bottom: 32px;
+}
+.trail-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: all 300ms;
+}
+.trail-step.active {
+  border-color: var(--amber);
+  color: var(--amber);
+  box-shadow: 0 0 12px rgba(245,158,11,0.3);
+}
+.trail-step.complete {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.trail-connector {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  transition: background 300ms;
+}
+.trail-connector.complete { background: var(--green); }
+
+/* Lesson card */
+.lesson-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 2px solid rgba(255,59,59,0.15);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.lesson-eyebrow {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 12px;
+}
+.lesson-question {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-bright);
+  line-height: 1.4;
+  margin-bottom: 20px;
+}
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.option-btn {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-sub);
+  text-align: left;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, color 150ms;
+  width: 100%;
+}
+.option-btn:hover:not(:disabled) {
+  border-color: rgba(245,158,11,0.4);
+  background: rgba(245,158,11,0.05);
+}
+.option-btn.correct {
+  border-color: rgba(16,185,129,0.4);
+  background: rgba(16,185,129,0.1);
+  color: var(--green);
+}
+.option-btn.wrong {
+  border-color: rgba(255,59,59,0.4);
+  background: rgba(255,59,59,0.08);
+  color: var(--red);
+}
+.option-btn:disabled { cursor: not-allowed; }
+
+/* Feedback box */
+.feedback-box {
+  display: none;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border: 1px solid;
+  border-left: 2px solid;
+}
+.feedback-box.visible { display: block; }
+.feedback-box.correct-fb {
+  background: rgba(16,185,129,0.05);
+  border-color: rgba(16,185,129,0.15);
+  border-left-color: rgba(16,185,129,0.4);
+}
+.feedback-box.wrong-fb {
+  background: rgba(245,158,11,0.05);
+  border-color: rgba(245,158,11,0.15);
+  border-left-color: rgba(245,158,11,0.4);
+}
+.feedback-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.feedback-label.green { color: var(--green); }
+.feedback-label.amber { color: var(--amber); }
+.feedback-body {
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.8;
+}
+
+/* Schema / terminal box */
+.terminal-box {
+  background: var(--void);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.9;
+}
+.terminal-box .t-table { color: var(--amber); }
+.terminal-box .t-fk    { color: var(--red); }
+.terminal-box .t-arrow { color: var(--muted); }
+
+/* Future warning box */
+.warning-box {
+  background: rgba(245,158,11,0.05);
+  border: 1px solid rgba(245,158,11,0.4);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.warning-box .label-amber { display: block; margin-bottom: 8px; }
+.warning-body {
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.8;
+}
+
+/* Tier system */
+.tier-section { margin-bottom: 24px; }
+.tier-section-label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.tier-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tier-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  transition: opacity 300ms;
+}
+.tier-row.locked { opacity: 0.45; }
+.tier-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 16px;
+}
+.tier-content { flex: 1; }
+.tier-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-bright);
+  margin-bottom: 2px;
+}
+.tier-desc {
+  font-size: 11px;
+  color: var(--text-sub);
+}
+.tier-icon {
+  font-size: 12px;
+  color: var(--red);
+}
+.tier-lock-label {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Next / complete buttons */
+.beat-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.btn-next {
+  display: none;
+}
+.btn-next.visible { display: flex; }
+.btn-complete {
+  display: none;
+}
+.btn-complete.visible { display: flex; }
+
+/* ─── SCREEN 3: COMPLETE ─────────────────────────────────── */
+#screen-complete .complete-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 80px;
+}
+.complete-icon {
+  font-size: 48px;
+  color: var(--red);
+  font-family: 'Syne', sans-serif;
+  margin-bottom: 20px;
+  line-height: 1;
+}
+.complete-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 36px;
+  color: var(--text-bright);
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+.complete-subtitle {
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.8;
+  max-width: 400px;
+  margin-bottom: 40px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 520px;
+  margin-bottom: 32px;
+}
+.stat-cell {
+  padding: 24px 20px;
+  border-right: 1px solid var(--border);
+}
+.stat-cell:last-child { border-right: none; }
+.stat-cell .label { display: block; margin-bottom: 8px; }
+.stat-value {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-value.amber { color: var(--amber); }
+.stat-value.white { color: var(--text-bright); }
+.stat-unit {
+  font-size: 11px;
+  color: var(--muted);
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="wordmark">KIRO <span>SAFETY</span></div>
+  <div class="status-pill"><span class="dot">●</span> ALL SYSTEMS NOMINAL</div>
+</div>
+
+<!-- SCREEN 1: THE ARENA HAS SPOKEN -->
+<div id="screen-arena" class="screen active">
+  <div class="container">
+    <div class="hero">
+      <div class="eyebrow anim-hidden" id="s1-eyebrow">// DESTRUCTIVE INTENT INTERCEPTED</div>
+      <h1 class="hero-title anim-hidden" id="s1-title">THE <span class="glitch">ARENA</span> HAS SPOKEN</h1>
+      <p class="hero-subtitle anim-hidden" id="s1-subtitle">3 of 5 gladiators claimed your command.</p>
+    </div>
+    <div class="command-box anim-hidden" id="s1-cmd">
+      <span class="label-red">// INTERCEPTED COMMAND</span>
+      <div class="command-text">DELETE FROM <span class="cmd-table">users</span></div>
+    </div>
+    <div class="severity-wrap anim-hidden" id="s1-severity">
+      <div class="severity-header">
+        <span class="label">THREAT SEVERITY</span>
+        <span class="severity-score">9/10</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill bar-fill-red" id="severity-fill"></div></div>
+    </div>
+    <div class="gladiators" id="s1-gladiators">
+      <div class="gladiator-row killed anim-hidden" onclick="showScreen('learn')">
+        <div class="status-circle killed">✗</div>
+        <div class="gladiator-name">SQL Injector</div>
+        <div class="gladiator-finding">3 injection vectors opened via unparameterized input</div>
+        <span class="badge badge-killed">KILLED</span>
+        <span class="gladiator-score score-killed">8</span>
+      </div>
+      <div class="gladiator-row killed anim-hidden" onclick="showScreen('learn')">
+        <div class="status-circle killed">✗</div>
+        <div class="gladiator-name">Concurrency Stampede</div>
+        <div class="gladiator-finding">DB fell over at 47 concurrent connections</div>
+        <span class="badge badge-killed">KILLED</span>
+        <span class="gladiator-score score-killed">7</span>
+      </div>
+      <div class="gladiator-row killed anim-hidden" onclick="showScreen('learn')">
+        <div class="status-circle killed">✗</div>
+        <div class="gladiator-name">Cascade Kill</div>
+        <div class="gladiator-finding">7 downstream tables destroyed via FK chain</div>
+        <span class="badge badge-killed">KILLED</span>
+        <span class="gladiator-score score-killed">9</span>
+      </div>
+      <div class="gladiator-row survived anim-hidden" onclick="showScreen('learn')">
+        <div class="status-circle survived">✓</div>
+        <div class="gladiator-name">Load Breaker</div>
+        <div class="gladiator-finding">Throughput degraded 60% but clone held</div>
+        <span class="badge badge-survived">SURVIVED</span>
+        <span class="gladiator-score score-survived">5</span>
+      </div>
+      <div class="gladiator-row survived anim-hidden" onclick="showScreen('learn')">
+        <div class="status-circle survived">✓</div>
+        <div class="gladiator-name">Rollback Test</div>
+        <div class="gladiator-finding">Transaction rollback succeeded — data recoverable</div>
+        <span class="badge badge-survived">SURVIVED</span>
+        <span class="gladiator-score score-survived">3</span>
+      </div>
+    </div>
+    <div class="metric-tiles anim-hidden" id="s1-metrics">
+      <div class="metric-tile">
+        <span class="label">ROWS AFFECTED</span>
+        <div class="metric-value red">14,203</div>
+        <div class="metric-unit">active records</div>
+      </div>
+      <div class="metric-tile">
+        <span class="label">TABLES DESTROYED</span>
+        <div class="metric-value red">7</div>
+        <div class="metric-unit">downstream cascade</div>
+      </div>
+      <div class="metric-tile">
+        <span class="label">RECOVERY POSSIBLE</span>
+        <div class="metric-value green">YES</div>
+        <div class="metric-unit">via rollback</div>
+      </div>
+    </div>
+    <div class="section-divider anim-hidden" id="s1-divider">
+      <span class="divider-text">PRODUCTION DATABASE WAS NEVER TOUCHED — SHADOW BRANCH WIPED</span>
+    </div>
+    <div class="arena-cta anim-hidden" id="s1-cta">
+      <button class="btn btn-red" onclick="showScreen('learn')">LEARN MORE ↗</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: LEARN MORE -->
+<div id="screen-learn" class="screen">
+  <div class="container">
+    <div class="learn-header">
+      <button class="back-btn" onclick="showScreen('arena')">← BACK</button>
+      <div class="label-red">// WHY IT BROKE</div>
+      <p class="learn-subtitle">Walk through each kill. Figure it out yourself.</p>
+    </div>
+    <div class="xp-wrap">
+      <div class="xp-header">
+        <span class="label">ARENA XP</span>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span class="streak-display" id="streak-display">STREAK: <span id="streak-count">0</span></span>
+          <span class="xp-score"><span id="xp-display">0</span> / 300</span>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill bar-fill-amber" id="xp-fill" style="width:0%;transition:width 600ms ease;"></div></div>
+    </div>
+    <div class="progress-trail">
+      <div class="trail-step active" id="step-1">1</div>
+      <div class="trail-connector" id="conn-1"></div>
+      <div class="trail-step" id="step-2">2</div>
+      <div class="trail-connector" id="conn-2"></div>
+      <div class="trail-step" id="step-3">3</div>
+      <div class="trail-connector" id="conn-3"></div>
+      <div class="trail-step" id="step-end">✓</div>
+    </div>
+    <div class="lesson-card" id="lesson-card">
+      <div class="lesson-eyebrow" id="lesson-eyebrow"></div>
+      <div class="lesson-question" id="lesson-question"></div>
+      <div class="options-list" id="options-list"></div>
+    </div>
+    <div class="feedback-box" id="feedback-box">
+      <div class="feedback-label" id="feedback-label"></div>
+      <div class="feedback-body" id="feedback-body"></div>
+    </div>
+    <div id="beat-extra"></div>
+    <div class="tier-section" id="tier-section" style="display:none;">
+      <div class="tier-section-label">PATH TO THE FIX</div>
+      <div class="tier-rows">
+        <div class="tier-row" id="tier-1">
+          <div class="tier-num">1</div>
+          <div class="tier-content">
+            <div class="tier-title">IDENTIFY THE VECTOR</div>
+            <div class="tier-desc">Recognize unparameterized input as the root cause</div>
+          </div>
+          <span class="tier-icon">◆</span>
+        </div>
+        <div class="tier-row locked" id="tier-2">
+          <div class="tier-num">2</div>
+          <div class="tier-content">
+            <div class="tier-title">UNDERSTAND THE BLAST RADIUS</div>
+            <div class="tier-desc">Map the FK cascade chain before executing destructive commands</div>
+          </div>
+          <span class="tier-lock-label" id="tier-2-status">LOCKED</span>
+        </div>
+        <div class="tier-row locked" id="tier-3">
+          <div class="tier-num">3</div>
+          <div class="tier-content">
+            <div class="tier-title">IMPLEMENT THE FIX</div>
+            <div class="tier-desc">Use parameterized queries, RESTRICT constraints, and connection limits</div>
+          </div>
+          <span class="tier-lock-label" id="tier-3-status">LOCKED</span>
+        </div>
+      </div>
+    </div>
+    <div class="beat-actions">
+      <button class="btn btn-red btn-next" id="btn-next" onclick="nextBeat()">NEXT →</button>
+      <button class="btn btn-red btn-full btn-complete" id="btn-complete" onclick="showScreen('complete')">COMPLETE ARENA →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: ARENA SURVIVED -->
+<div id="screen-complete" class="screen">
+  <div class="container">
+    <div class="complete-inner">
+      <div class="complete-icon">⚔</div>
+      <h2 class="complete-title">ARENA SURVIVED</h2>
+      <p class="complete-subtitle">Shadow branch destroyed. Production untouched. You now know what you almost did.</p>
+      <div class="stats-grid">
+        <div class="stat-cell">
+          <span class="label">XP EARNED</span>
+          <div class="stat-value amber" id="final-xp">0</div>
+          <div class="stat-unit">this run</div>
+        </div>
+        <div class="stat-cell">
+          <span class="label">KILLS EXPLAINED</span>
+          <div class="stat-value white">3</div>
+          <div class="stat-unit">gladiators</div>
+        </div>
+        <div class="stat-cell">
+          <span class="label">STREAK</span>
+          <div class="stat-value white" id="final-streak">0</div>
+          <div class="stat-unit">correct answers</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="showScreen('arena')">← BACK TO ARENA</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var xp = 0, streak = 0, currentBeat = 1;
+var answered = [false, false, false];
+var tier2Unlocked = false, tier3Unlocked = false;
+
+var beats = [
+  {
+    eyebrow: 'G1 — SQL INJECTOR · SEVERITY 8',
+    question: 'Why did the SQL Injector gladiator kill your command?',
+    options: [
+      { text: 'The query used string concatenation instead of parameterized inputs', correct: true },
+      { text: 'The database user had too many privileges', correct: false },
+      { text: 'The table had no primary key defined', correct: false },
+      { text: 'The connection pool was misconfigured', correct: false }
+    ],
+    correctFeedback: 'Unparameterized queries allow attackers to inject arbitrary SQL. Always use prepared statements or parameterized queries. The gladiator found 3 distinct injection vectors in this single DELETE statement.',
+    wrongHint: 'Think about how the SQL string was constructed before it reached the database engine.',
+    extra: null
+  },
+  {
+    eyebrow: 'G3 — CASCADE KILL · SEVERITY 9',
+    question: 'Which schema design decision caused 7 tables to be destroyed?',
+    options: [
+      { text: 'Missing indexes on foreign key columns', correct: false },
+      { text: 'Foreign keys defined with ON DELETE CASCADE', correct: true },
+      { text: 'The users table had too many columns', correct: false },
+      { text: 'No transaction isolation level was set', correct: false }
+    ],
+    correctFeedback: 'ON DELETE CASCADE propagates deletions down the entire FK chain. When users was deleted, orders → order_items → invoices → payments → audit_logs → sessions all followed. Use ON DELETE RESTRICT or SET NULL instead.',
+    wrongHint: 'Look at the FK constraint definitions in the schema. What happens when a parent row is deleted?',
+    extra: 'schema'
+  },
+  {
+    eyebrow: 'G2 — CONCURRENCY STAMPEDE · SEVERITY 7',
+    question: 'At what point did the database fall over under concurrent load?',
+    options: [
+      { text: 'At 10 concurrent connections', correct: false },
+      { text: 'At 25 concurrent connections', correct: false },
+      { text: 'At 47 concurrent connections', correct: true },
+      { text: 'It never fell over — it just slowed down', correct: false }
+    ],
+    correctFeedback: 'The shadow clone collapsed at 47 concurrent connections attempting the DELETE. Without connection pooling limits and query timeouts, a single unguarded DELETE can become a denial-of-service vector under load.',
+    wrongHint: 'The gladiator report logged the exact connection count at failure. Check the severity score.',
+    extra: 'warning'
+  }
+];
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(function(s) {
+    s.classList.remove('active', 'fade-in');
+  });
+  var target = document.getElementById('screen-' + name);
+  target.classList.add('active', 'fade-in');
+  if (name === 'learn' && currentBeat === 1 && !answered[0]) loadBeat(1);
+  if (name === 'complete') {
+    document.getElementById('final-xp').textContent = xp;
+    document.getElementById('final-streak').textContent = streak;
+  }
+}
+
+function loadBeat(beatNum) {
+  currentBeat = beatNum;
+  var beat = beats[beatNum - 1];
+  document.getElementById('lesson-eyebrow').textContent = beat.eyebrow;
+  document.getElementById('lesson-question').textContent = beat.question;
+  var optList = document.getElementById('options-list');
+  optList.innerHTML = '';
+  beat.options.forEach(function(opt, i) {
+    var btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = opt.text;
+    btn.addEventListener('click', function() { handleAnswer(i, opt.correct, beat, btn); });
+    optList.appendChild(btn);
+  });
+  var fb = document.getElementById('feedback-box');
+  fb.className = 'feedback-box';
+  document.getElementById('btn-next').classList.remove('visible');
+  document.getElementById('btn-complete').classList.remove('visible');
+  var extra = document.getElementById('beat-extra');
+  extra.innerHTML = '';
+  if (beat.extra === 'schema') {
+    extra.innerHTML = '<div class="terminal-box">' +
+      '<div><span class="t-table">users</span> <span class="t-arrow">→</span> <span class="t-table">orders</span> &nbsp;&nbsp;<span class="t-fk">FK: ON DELETE CASCADE</span></div>' +
+      '<div><span class="t-table">orders</span> <span class="t-arrow">→</span> <span class="t-table">order_items</span> &nbsp;&nbsp;<span class="t-fk">FK: ON DELETE CASCADE</span></div>' +
+      '<div><span class="t-table">order_items</span> <span class="t-arrow">→</span> <span class="t-table">invoices</span> &nbsp;&nbsp;<span class="t-fk">FK: ON DELETE CASCADE</span></div>' +
+      '<div><span class="t-table">invoices</span> <span class="t-arrow">→</span> <span class="t-table">payments</span> &nbsp;&nbsp;<span class="t-fk">FK: ON DELETE CASCADE</span></div>' +
+      '<div><span class="t-table">payments</span> <span class="t-arrow">→</span> <span class="t-table">audit_logs</span> &nbsp;&nbsp;<span class="t-fk">FK: ON DELETE CASCADE</span></div>' +
+      '<div><span class="t-table">audit_logs</span> <span class="t-arrow">→</span> <span class="t-table">sessions</span> &nbsp;&nbsp;<span class="t-fk">FK: ON DELETE CASCADE</span></div>' +
+      '</div>';
+  } else if (beat.extra === 'warning') {
+    extra.innerHTML = '<div class="warning-box"><span class="label-amber">// FUTURE WARNING</span><div class="warning-body">In production, this DELETE would have acquired a table-level lock. Under concurrent load, this creates a lock convoy — all subsequent queries queue behind it. At 47 connections, the wait queue exceeded the connection pool limit and the database rejected new connections entirely.</div></div>';
+  }
+  var tierSection = document.getElementById('tier-section');
+  if (beatNum === 3) {
+    tierSection.style.display = 'block';
+    setTimeout(function() {
+      if (!tier3Unlocked) {
+        tier3Unlocked = true;
+        var t3 = document.getElementById('tier-3');
+        t3.classList.remove('locked');
+        document.getElementById('tier-3-status').innerHTML = '<span class="tier-icon">◆</span>';
+      }
+    }, 600);
+  } else {
+    tierSection.style.display = 'none';
+  }
+  updateProgress(beatNum);
+}
+
+function handleAnswer(index, isCorrect, beat, chosenBtn) {
+  if (answered[currentBeat - 1]) return;
+  var buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach(function(b) { b.disabled = true; });
+  var fb = document.getElementById('feedback-box');
+  var fbLabel = document.getElementById('feedback-label');
+  var fbBody = document.getElementById('feedback-body');
+  if (isCorrect) {
+    answered[currentBeat - 1] = true;
+    chosenBtn.classList.add('correct');
+    fb.className = 'feedback-box correct-fb visible';
+    fbLabel.className = 'feedback-label green';
+    fbLabel.textContent = '+100 XP · CORRECT';
+    fbBody.textContent = beat.correctFeedback;
+    updateXP(100);
+    streak++;
+    updateStreak();
+    if (currentBeat === 2 && !tier2Unlocked) {
+      setTimeout(function() {
+        tier2Unlocked = true;
+        var t2 = document.getElementById('tier-2');
+        t2.classList.remove('locked');
+        document.getElementById('tier-2-status').innerHTML = '<span class="tier-icon">◆</span>';
+      }, 600);
+    }
+    setTimeout(function() {
+      if (currentBeat < 3) {
+        document.getElementById('btn-next').classList.add('visible');
+      } else {
+        document.getElementById('btn-complete').classList.add('visible');
+      }
+    }, 400);
+    var stepEl = document.getElementById('step-' + currentBeat);
+    stepEl.classList.remove('active');
+    stepEl.classList.add('complete');
+    stepEl.textContent = '✓';
+    var connEl = document.getElementById('conn-' + currentBeat);
+    if (connEl) connEl.classList.add('complete');
+    if (currentBeat === 3) {
+      var endStep = document.getElementById('step-end');
+      endStep.classList.add('complete');
+    }
+  } else {
+    chosenBtn.classList.add('wrong');
+    fb.className = 'feedback-box wrong-fb visible';
+    fbLabel.className = 'feedback-label amber';
+    fbLabel.textContent = 'REDIRECT';
+    fbBody.textContent = beat.wrongHint;
+    streak = 0;
+    updateStreak();
+    setTimeout(function() {
+      chosenBtn.classList.remove('wrong');
+      buttons.forEach(function(b) { b.disabled = false; });
+      fb.className = 'feedback-box';
+    }, 2200);
+  }
+}
+
+function nextBeat() {
+  if (currentBeat >= 3) return;
+  var next = currentBeat + 1;
+  var nextStep = document.getElementById('step-' + next);
+  if (nextStep) nextStep.classList.add('active');
+  loadBeat(next);
+}
+
+function updateProgress(beatNum) {
+  for (var i = 1; i <= 3; i++) {
+    var step = document.getElementById('step-' + i);
+    if (answered[i - 1]) {
+      step.classList.remove('active');
+      step.classList.add('complete');
+      step.textContent = '✓';
+    } else if (i === beatNum) {
+      step.classList.add('active');
+      step.classList.remove('complete');
+      step.textContent = i;
+    } else {
+      step.classList.remove('active', 'complete');
+      step.textContent = i;
+    }
+  }
+}
+
+function updateXP(amount) {
+  xp = Math.min(xp + amount, 300);
+  document.getElementById('xp-display').textContent = xp;
+  document.getElementById('xp-fill').style.width = (xp / 300 * 100) + '%';
+}
+
+function updateStreak() {
+  var el = document.getElementById('streak-display');
+  document.getElementById('streak-count').textContent = streak;
+  if (streak >= 2) { el.classList.add('visible'); } else { el.classList.remove('visible'); }
+}
+
+function runArenaAnimations() {
+  var schedule = [
+    { id: 's1-eyebrow',  delay: 300,  cls: 'anim-fade-in' },
+    { id: 's1-title',    delay: 500,  cls: 'anim-slide-up' },
+    { id: 's1-subtitle', delay: 600,  cls: 'anim-fade-in' },
+    { id: 's1-cmd',      delay: 700,  cls: 'anim-fade-in' },
+    { id: 's1-severity', delay: 900,  cls: 'anim-fade-in' },
+    { id: 's1-metrics',  delay: 1400, cls: 'anim-fade-in' },
+    { id: 's1-divider',  delay: 1600, cls: 'anim-fade-in' },
+    { id: 's1-cta',      delay: 1800, cls: 'anim-fade-in' }
+  ];
+  schedule.forEach(function(item) {
+    setTimeout(function() {
+      var el = document.getElementById(item.id);
+      if (el) { el.classList.remove('anim-hidden'); el.classList.add(item.cls); }
+    }, item.delay);
+  });
+  var rows = document.querySelectorAll('#s1-gladiators .gladiator-row');
+  rows.forEach(function(row, i) {
+    setTimeout(function() {
+      row.classList.remove('anim-hidden');
+      row.classList.add('anim-slide-x');
+    }, 1100 + i * 150);
+  });
+  setTimeout(function() {
+    document.getElementById('severity-fill').style.width = '90%';
+    document.getElementById('severity-fill').style.transition = 'width 1.2s ease';
+  }, 900);
+  setTimeout(function() {
+    var cmd = document.getElementById('s1-cmd');
+    if (cmd) cmd.classList.add('glitch-border-once');
+  }, 700);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  runArenaAnimations();
+});
+</script>
+
+</body>
+</html>
