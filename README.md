@@ -1,8 +1,8 @@
-# Kiro — Colosseum
+# The Colosseum
 
 **You run a bad database command. Instead of a crash, you get an arena.**
 
-Kiro intercepts risky SQL commands, clones your database in milliseconds, and unleashes five AI agents to attack the clone — showing you exactly what would have happened before it ever touches production.
+The Colosseum intercepts risky SQL commands, clones your database in milliseconds, and unleashes five AI agents to attack the clone — showing you exactly what would have happened before it ever touches production.
 
 ---
 
@@ -35,7 +35,7 @@ Your production database is never touched.
 
 - **FastMCP** — MCP server that orchestrates the agents
 - **Neon** — instant Postgres branch for the shadow clone
-- **LangChain + Claude** — each gladiator is an independent AI sub-agent
+- **LangChain** — each gladiator is an independent AI sub-agent
 - **Python / asyncio** — all five gladiators run in parallel
 
 ---
@@ -67,3 +67,7 @@ cp colosseum-cli/.env.example .env
 Built at Kiro Spark Challenge under the Education track.
 
 > *Teaching developers what their code actually does — without the production incident.*
+
+## Public Posts
+- [Twitter thread](https://x.com/itzharshith/status/2047820250327224350)
+- [LinkedIn post](https://www.linkedin.com/feed/update/urn:li:activity:7453635475514494976/)
