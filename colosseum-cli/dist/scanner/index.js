@@ -30,10 +30,14 @@ function secretHound(_filePath, lines) {
 }
 function injectionScout(_filePath, lines) {
     const vulns = [];
-    const directConcat = /query\s*\+\s*(req\.|user|input|params|body)/i;
+    // Catches `db.query("SELECT ..." + req.params.id)` — the most common
+    // textbook SQL-injection shape, which is what surfaces in real review.
+    const concatInsideQueryCall = /\b(query|execute|exec|run|raw)\s*\(\s*['"`][^'"`]*['"`]\s*\+\s*(req\.|user\.|input\.|params\.|body\.)/i;
+    // Legacy adjacency form: `query + req.x` (rare but cheap to keep).
+    const directConcat = /\bquery\s*\+\s*(req\.|user|input|params|body)/i;
     const templateLiteral = /`[^`]*(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)[^`]*\$\{/i;
     lines.forEach((line, i) => {
-        if (directConcat.test(line)) {
+        if (concatInsideQueryCall.test(line) || directConcat.test(line)) {
             vulns.push({
                 type: 'SQL_INJECTION',
                 severity: 'critical',
@@ -56,10 +60,29 @@ function injectionScout(_filePath, lines) {
 }
 function inputGuardian(_filePath, lines) {
     const vulns = [];
-    const dbOrShell = /\b(query|exec|execute|spawn|shell)\s*\([^)]*\b(req\.|user|input|params|body)/i;
-    const otherFunc = /\b\w+\s*\([^)]*\b(req\.|user|input|params|body)[^)]*\)/i;
+    // Only fire on explicit user-input access (req.foo, userInput, etc.) — the
+    // old `(user|input|params|body)` form matched the word "users" in SQL
+    // strings, generating massive false positives.
+    const userInputRef = /\b(req\.\w|userInput|user_input)\b/i;
+    const dbOrShellCall = /\b(query|exec|execute|spawn|shell)\s*\(/i;
+    const anyFnCall = /\b\w+\s*\(/i;
+    // Safe shapes — these expressions sanitize/validate user input before use,
+    // or use the driver's parameter binding instead of string interpolation.
+    const parameterizedQuery = /\.(query|execute)\s*\(\s*['"`][^'"`]*\$\d+[^'"`]*['"`]\s*,/i;
+    const sanitizerWrap = /\b(Number|parseInt|parseFloat|String|Boolean|JSON\.parse|sanitize|escape|validate|hash|bcrypt|redact|trim|requireEnv)\s*\(\s*req\./i;
+    // `app.get('/path', (req, res) => …)` — `req` here is the framework
+    // parameter, not a value being mishandled. Skip route declaration lines.
+    const routeDeclarationLine = /\b(app|router)\.(get|post|put|delete|patch|use)\s*\(/i;
     lines.forEach((line, i) => {
-        if (dbOrShell.test(line)) {
+        if (!userInputRef.test(line))
+            return;
+        if (routeDeclarationLine.test(line) && !dbOrShellCall.test(line))
+            return;
+        if (parameterizedQuery.test(line))
+            return;
+        if (sanitizerWrap.test(line))
+            return;
+        if (dbOrShellCall.test(line)) {
             vulns.push({
                 type: 'UNVALIDATED_INPUT',
                 severity: 'high',
@@ -68,7 +91,7 @@ function inputGuardian(_filePath, lines) {
                 snippet: line.trim().slice(0, 120),
             });
         }
-        else if (otherFunc.test(line)) {
+        else if (anyFnCall.test(line)) {
             vulns.push({
                 type: 'UNVALIDATED_INPUT',
                 severity: 'medium',
@@ -139,23 +162,35 @@ function authHeuristic(filePath, lines) {
         return [];
     const vulns = [];
     const routePattern = /\b(app|router)\.(get|post|put|delete|patch)\s*\(\s*['"`]/;
-    const authPattern = /\b(authenticate|authorize|requireAuth|isAuthenticated|verifyToken|passport\.authenticate)\b/;
+    // Only flag routes that are clearly risky — destructive verbs (DELETE/PATCH/PUT)
+    // or paths that announce themselves as admin/destructive. Public GETs and
+    // unauthenticated /login endpoints are *expected* shapes.
+    const destructiveMethod = /\.(delete|patch|put)\s*\(/i;
+    const sensitivePath = /['"`][^'"`]*\/(admin|delete|destroy|drop|wipe|reset|migrate)\b/i;
+    // Inline middleware on the route itself: `app.delete('/x', requireAdmin, handler)`
+    const inlineMiddleware = /\.(get|post|put|delete|patch)\s*\(\s*['"`][^'"`]+['"`]\s*,\s*[a-zA-Z_$]\w*\s*,/i;
+    const authPattern = /\b(authenticate|authorize|requireAuth|requireAdmin|isAuthenticated|verifyToken|passport\.authenticate)\b/i;
     lines.forEach((line, i) => {
-        if (routePattern.test(line)) {
-            const window = lines.slice(Math.max(0, i - 2), i + 5).join('\n');
-            if (!authPattern.test(window)) {
-                const match = line.match(/\.(get|post|put|delete|patch)\s*\(\s*(['"`])([^'"` ]+)/);
-                const method = match?.[1]?.toUpperCase() ?? 'ROUTE';
-                const path = match?.[3] ?? '(unknown)';
-                vulns.push({
-                    type: 'MISSING_AUTH_CHECK',
-                    severity: 'medium',
-                    line: i + 1,
-                    description: `${method} ${path} has no authentication middleware.`,
-                    snippet: line.trim().slice(0, 120),
-                });
-            }
-        }
+        if (!routePattern.test(line))
+            return;
+        const isRisky = destructiveMethod.test(line) || sensitivePath.test(line);
+        if (!isRisky)
+            return;
+        if (inlineMiddleware.test(line))
+            return;
+        const window = lines.slice(Math.max(0, i - 2), i + 5).join('\n');
+        if (authPattern.test(window))
+            return;
+        const match = line.match(/\.(get|post|put|delete|patch)\s*\(\s*(['"`])([^'"` ]+)/);
+        const method = match?.[1]?.toUpperCase() ?? 'ROUTE';
+        const path = match?.[3] ?? '(unknown)';
+        vulns.push({
+            type: 'MISSING_AUTH_CHECK',
+            severity: 'medium',
+            line: i + 1,
+            description: `${method} ${path} has no authentication middleware.`,
+            snippet: line.trim().slice(0, 120),
+        });
     });
     return vulns;
 }

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Colosseum — Spark Challenge Pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- ASU brand uses Arial; Inter is a near-identical web fallback when Arial isn't desired. We stick with Arial per template. -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── ASU brand tokens (extracted from template theme1.xml) ───── */
+    :root {
+      --asu-maroon:   #8C1D40;
+      --asu-gold:     #FFC627;
+      --asu-green:    #78BE20;
+      --asu-orange:   #FF7F32;
+      --asu-blue:     #00A3E0;
+      --asu-red:      #CC2F2F;
+      --asu-dk1:      #191919;   /* near-black body */
+      --asu-dk2:      #747474;   /* secondary text */
+      --asu-lt1:      #FFFFFF;
+      --asu-lt2:      #E8E8E8;   /* dividers */
+      --asu-text:     #191919;
+      --asu-bg:       #FFFFFF;
+
+      --font-sans:    Arial, Helvetica, 'Liberation Sans', sans-serif;
+      --font-mono:    'JetBrains Mono', Menlo, Monaco, monospace;
+    }
+
+    html, body {
+      background: var(--asu-bg); color: var(--asu-text);
+      font-family: var(--font-sans);
+      height: 100%; overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Slide deck shell ─────────────────────────────────────────── */
+    .deck {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: row;
+      overflow-x: auto; overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+    }
+    .deck::-webkit-scrollbar { display: none; }
+
+    /* Each slide is a 16:9 frame matching the PPTX canvas (1280×720 logical, scaled). */
+    .slide {
+      flex: 0 0 100vw; height: 100vh;
+      position: relative;
+      scroll-snap-align: start;
+      padding: 70px 80px;
+      background-color: var(--asu-lt1);
+      background-image: url('./pitch-assets/asu-dot-grid.png');
+      background-size: cover;
+      background-position: center;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    /* ── ASU brand chrome on every slide ──────────────────────────── */
+    .asu-mark {
+      position: absolute; top: 32px; left: 40px;
+      height: 44px; width: auto;
+      z-index: 5;
+    }
+    .deck-meta {
+      position: absolute; bottom: 28px; left: 40px;
+      font-family: var(--font-sans); font-size: 11px;
+      color: var(--asu-dk2); letter-spacing: 0.04em;
+      z-index: 5;
+    }
+    .deck-meta b { color: var(--asu-maroon); font-weight: 700; }
+    .page-num {
+      position: absolute; bottom: 28px; right: 40px;
+      font-family: var(--font-sans); font-size: 11px;
+      color: var(--asu-dk2); letter-spacing: 0.06em;
+      z-index: 5;
+    }
+    .page-num b { color: var(--asu-dk1); font-weight: 700; }
+
+    /* ── Common typography (Arial, ASU weights) ──────────────────── */
+    .eyebrow {
+      font-family: var(--font-sans); font-size: 14px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--asu-maroon); margin-bottom: 16px;
+    }
+    .h1 {
+      font-family: var(--font-sans); font-weight: 900;
+      font-size: clamp(64px, 7vw, 112px); line-height: 0.98; letter-spacing: -0.02em;
+      color: var(--asu-dk1);
+    }
+    .h1 .gold   { color: var(--asu-gold); -webkit-text-stroke: 1px var(--asu-dk1); }
+    .h1 .maroon { color: var(--asu-maroon); }
+    .h2 {
+      font-family: var(--font-sans); font-weight: 900;
+      font-size: clamp(40px, 4.2vw, 64px); line-height: 1.05; letter-spacing: -0.015em;
+      color: var(--asu-dk1);
+    }
+    .h2 .maroon { color: var(--asu-maroon); }
+    .h2 .gold-hl {
+      background: linear-gradient(180deg, transparent 60%, var(--asu-gold) 60%, var(--asu-gold) 92%, transparent 92%);
+      padding: 0 4px;
+    }
+    .h3 {
+      font-family: var(--font-sans); font-size: 18px; font-weight: 700;
+      letter-spacing: 0.06em; color: var(--asu-dk1); text-transform: uppercase;
+    }
+    .body {
+      font-family: var(--font-sans); font-size: 22px; line-height: 1.55;
+      color: var(--asu-dk1);
+    }
+    .body.muted { color: var(--asu-dk2); }
+    .small {
+      font-family: var(--font-sans); font-size: 13px;
+      color: var(--asu-dk2); letter-spacing: 0.04em;
+    }
+    .mono { font-family: var(--font-mono); }
+
+    /* ── HUD (preview only — hidden on print) ─────────────────────── */
+    .hud {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 18px;
+      background: rgba(25, 25, 25, 0.92); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 198, 39, 0.5); border-radius: 999px;
+      padding: 8px 18px;
+      font-family: var(--font-sans); font-size: 11px;
+      color: rgba(255, 255, 255, 0.7); letter-spacing: 0.16em; text-transform: uppercase;
+      z-index: 10000;
+    }
+    .hud button {
+      background: none; border: none; color: var(--asu-gold); cursor: pointer;
+      font-family: var(--font-sans); font-size: 13px; padding: 0 4px; font-weight: 700;
+    }
+    .hud button:hover { color: #fff; }
+    .hud .count { color: #fff; font-weight: 700; }
+    .hud .sep { opacity: 0.4; }
+
+    /* ── Speaker notes drawer (preview only) ──────────────────────── */
+    .notes {
+      position: fixed; right: 0; top: 0; bottom: 0;
+      width: 380px; max-width: 90vw;
+      background: rgba(25, 25, 25, 0.98); backdrop-filter: blur(12px);
+      border-left: 2px solid var(--asu-gold);
+      padding: 32px 28px; overflow-y: auto;
+      transform: translateX(100%); transition: transform 0.3s ease;
+      z-index: 9999;
+      font-family: var(--font-sans); font-size: 14px; line-height: 1.65;
+      color: rgba(255, 255, 255, 0.92);
+    }
+    .notes.open { transform: translateX(0); }
+    .notes h3 {
+      font-size: 11px; letter-spacing: 0.22em; font-weight: 700;
+      color: var(--asu-gold); margin-bottom: 14px; text-transform: uppercase;
+      border-bottom: 1px solid rgba(255, 198, 39, 0.4); padding-bottom: 10px;
+    }
+    .notes .body { white-space: pre-line; color: rgba(255, 255, 255, 0.92); font-size: 14px; }
+    .notes .meta {
+      color: rgba(255, 198, 39, 0.7); font-size: 11px; margin-top: 18px;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────
+       SLIDE 1 — TITLE  (mirrors template slide 7 / layout 50)
+    ───────────────────────────────────────────────────────────────── */
+    .slide-title {
+      align-items: flex-start; justify-content: flex-end;
+      padding: 80px 80px 130px;
+    }
+    .slide-title .eyebrow { color: var(--asu-maroon); }
+    .slide-title .project-mark {
+      position: absolute; top: 32px; right: 40px;
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-sans); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.18em; color: var(--asu-dk1); text-transform: uppercase;
+    }
+    .slide-title .project-mark svg { color: var(--asu-maroon); }
+    .slide-title .gold-bar {
+      position: absolute; left: 0; bottom: 0; height: 14px; width: 100%;
+      background: var(--asu-gold);
+    }
+    .slide-title .maroon-bar {
+      position: absolute; left: 0; bottom: 14px; height: 6px; width: 38%;
+      background: var(--asu-maroon);
+    }
+    .slide-title .h1 { font-size: clamp(84px, 9.5vw, 144px); margin-bottom: 28px; }
+    .slide-title .tagline {
+      font-family: var(--font-sans); font-size: 28px; font-weight: 400;
+      color: var(--asu-dk1); max-width: 820px; line-height: 1.35;
+    }
+    .slide-title .team-line {
+      margin-top: 32px;
+      font-family: var(--font-sans); font-size: 16px; font-weight: 700;
+      letter-spacing: 0.14em; color: var(--asu-maroon); text-transform: uppercase;
+    }
+    .slide-title .team-line span { color: var(--asu-dk2); font-weight: 400; }
+
+    /* ─────────────────────────────────────────────────────────────────
+       SLIDE 2 — PROBLEM
+    ───────────────────────────────────────────────────────────────── */
+    .slide-content {
+      padding-top: 110px;        /* clear the ASU logo */
+      padding-bottom: 80px;
+    }
+    .two-col {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 56px;
+      flex: 1; align-items: center;
+    }
+    .bullet-list { list-style: none; display: flex; flex-direction: column; gap: 18px; margin-top: 24px; }
+    .bullet-list li {
+      display: flex; gap: 14px;
+      font-family: var(--font-sans); font-size: 21px; line-height: 1.5;
+      color: var(--asu-dk1);
+    }
+    .bullet-list li::before {
+      content: ''; flex-shrink: 0; margin-top: 10px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--asu-gold); box-shadow: 0 0 0 2px var(--asu-maroon);
+    }
+    .bullet-list li b { color: var(--asu-maroon); font-weight: 700; }
+    .bullet-list li em { color: var(--asu-dk1); font-style: normal; font-weight: 700; background: rgba(255, 198, 39, 0.5); padding: 0 3px; }
+
+    .cascade {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 24px;
+      background: var(--asu-lt1); border: 2px solid var(--asu-dk1);
+      border-radius: 4px;
+      box-shadow: 6px 6px 0 var(--asu-gold);
+    }
+    .cascade-title {
+      font-family: var(--font-sans); font-size: 14px; font-weight: 700;
+      letter-spacing: 0.16em; color: var(--asu-maroon); text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .cascade-step {
+      padding: 12px 16px;
+      background: var(--asu-lt1); border: 1px solid var(--asu-lt2);
+      border-radius: 4px; border-left: 4px solid var(--asu-gold);
+    }
+    .cascade-step.warn { border-left-color: var(--asu-maroon); background: rgba(140, 29, 64, 0.04); }
+    .cascade-step .label {
+      font-family: var(--font-sans); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.16em; color: var(--asu-maroon); text-transform: uppercase;
+    }
+    .cascade-step .meta {
+      font-family: var(--font-sans); font-size: 16px; color: var(--asu-dk1); margin-top: 3px;
+    }
+    .cascade-arrow { color: var(--asu-dk2); font-size: 16px; text-align: center; line-height: 1; }
+    .cascade-cost {
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px dashed var(--asu-lt2);
+      font-family: var(--font-sans); font-size: 15px; color: var(--asu-dk1);
+      text-align: center;
+    }
+    .cascade-cost b { color: var(--asu-maroon); font-weight: 700; }
+
+    /* ─────────────────────────────────────────────────────────────────
+       SLIDE 3 — SOLUTION
+    ───────────────────────────────────────────────────────────────── */
+    .pull-quote {
+      margin-top: 28px; padding: 22px 28px;
+      border-left: 6px solid var(--asu-gold);
+      background: rgba(255, 198, 39, 0.12);
+      font-family: var(--font-sans); font-size: 22px; line-height: 1.45;
+      color: var(--asu-dk1); font-weight: 700;
+    }
+    .pull-quote .maroon { color: var(--asu-maroon); }
+    .pull-quote .small {
+      display: block; margin-top: 8px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.18em;
+      color: var(--asu-maroon); text-transform: uppercase;
+    }
+
+    /* "Device frame" — wraps a product screenshot in dark gold-on-black,
+       intentionally contrasting the white slide. */
+    .device-frame {
+      width: 100%; aspect-ratio: 16 / 10;
+      border: 1px solid var(--asu-dk1); border-radius: 12px;
+      background: #000; color: #ece2c9;
+      box-shadow: 12px 12px 0 var(--asu-maroon);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 12px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(255, 198, 39, 0.5);
+      position: relative; overflow: hidden;
+    }
+    .device-frame::before {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 198, 39, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 198, 39, 0.04) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .device-frame .placeholder { position: relative; text-align: center; }
+    .device-frame .placeholder small {
+      display: block; margin-top: 8px; font-size: 9px;
+      color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* ─────────────────────────────────────────────────────────────────
+       SLIDE 4 — HOW IT TEACHES  (Education engine — pedagogical hero)
+    ───────────────────────────────────────────────────────────────── */
+    .edu-grid {
+      display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px;
+      flex: 1; align-items: center;
+    }
+    .principle-stack { display: flex; flex-direction: column; gap: 14px; }
+    .principle {
+      display: grid; grid-template-columns: 64px 1fr; gap: 18px;
+      padding: 18px 20px;
+      background: var(--asu-lt1); border: 2px solid var(--asu-dk1);
+      border-radius: 4px;
+      box-shadow: 5px 5px 0 var(--asu-gold);
+    }
+    .principle .marker {
+      font-family: var(--font-sans); font-size: 13px; font-weight: 900;
+      letter-spacing: 0.18em; color: var(--asu-maroon); text-transform: uppercase;
+      writing-mode: vertical-rl; transform: rotate(180deg);
+      border-right: 3px solid var(--asu-gold);
+      padding-right: 12px;
+      align-self: stretch; display: flex; align-items: center; justify-content: center;
+    }
+    .principle h4 {
+      font-family: var(--font-sans); font-size: 20px; font-weight: 900;
+      color: var(--asu-dk1); letter-spacing: 0; line-height: 1.25;
+      margin-bottom: 8px;
+    }
+    .principle h4 .gold-hl {
+      background: linear-gradient(180deg, transparent 60%, var(--asu-gold) 60%, var(--asu-gold) 92%, transparent 92%);
+      padding: 0 4px;
+    }
+    .principle p {
+      font-family: var(--font-sans); font-size: 16px; line-height: 1.5;
+      color: var(--asu-dk1);
+    }
+    .principle p .cite {
+      display: block; margin-top: 6px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+      color: var(--asu-dk2); text-transform: uppercase;
+    }
+
+    /* MCQ flashcard mock — keeps product gold-on-black inside white slide */
+    .mcq-mock {
+      width: 100%; padding: 22px;
+      background: #000; border: 2px solid var(--asu-dk1); border-radius: 12px;
+      box-shadow: 12px 12px 0 var(--asu-maroon);
+      font-family: var(--font-mono);
+      color: #ece2c9; position: relative; overflow: hidden;
+    }
+    .mcq-mock::before {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 198, 39, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 198, 39, 0.04) 1px, transparent 1px);
+      background-size: 32px 32px; pointer-events: none;
+    }
+    .mcq-head {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: rgba(255, 198, 39, 0.85);
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 198, 39, 0.25);
+      position: relative;
+    }
+    .mcq-head .trial { font-weight: 700; }
+    .mcq-head .brand { color: rgba(255, 198, 39, 0.7); }
+    .mcq-finding {
+      margin-top: 14px; position: relative;
+      font-family: var(--font-sans); font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      letter-spacing: 0.08em;
+    }
+    .mcq-code {
+      margin-top: 10px; padding: 12px 14px;
+      background: rgba(255, 198, 39, 0.07);
+      border-left: 2px solid #FFC627;
+      border-radius: 2px;
+      font-family: var(--font-mono); font-size: 13px; line-height: 1.5;
+      color: #ece2c9; position: relative; white-space: pre;
+    }
+    .mcq-code .red { color: #ff6b5b; }
+    .mcq-q {
+      margin-top: 16px; position: relative;
+      font-family: 'Cinzel', serif; font-size: 17px; font-weight: 700;
+      color: #fff; letter-spacing: 0.04em;
+    }
+    .mcq-options { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; position: relative; }
+    .mcq-opt {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 198, 39, 0.18);
+      border-radius: 4px;
+      font-family: var(--font-mono); font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .mcq-opt .dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 1.5px solid rgba(255, 198, 39, 0.5);
+      flex-shrink: 0;
+    }
+    .mcq-opt.selected {
+      border-color: #FFC627; background: rgba(255, 198, 39, 0.08);
+      color: #fff;
+    }
+    .mcq-opt.selected .dot {
+      background: #FFC627; border-color: #FFC627;
+      box-shadow: inset 0 0 0 2.5px #000;
+    }
+    .mcq-opt .letter { color: #FFC627; font-weight: 700; }
+    .mcq-cta {
+      margin-top: 16px; padding: 12px 16px;
+      background: #FFC627; color: #000;
+      font-family: var(--font-sans); font-size: 13px; font-weight: 900;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      text-align: center; border-radius: 4px;
+      position: relative;
+    }
+    .mcq-guard {
+      margin-top: 12px; position: relative;
+      font-family: var(--font-sans); font-size: 11px;
+      color: rgba(255, 198, 39, 0.7);
+      letter-spacing: 0.16em; text-transform: uppercase; text-align: center;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────
+       SLIDE 5 — DEMO  (full-width video)
+    ───────────────────────────────────────────────────────────────── */
+    .slide-demo { align-items: center; justify-content: center; padding: 100px 80px 90px; }
+    .demo-head { text-align: center; margin-bottom: 28px; }
+    .video-frame {
+      width: min(1100px, 78vw); aspect-ratio: 16 / 9;
+      border: 2px solid var(--asu-dk1); border-radius: 14px;
+      background: #000;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 14px 14px 0 var(--asu-gold);
+      position: relative; overflow: hidden;
+    }
+    .play-icon {
+      width: 96px; height: 96px; border-radius: 50%;
+      background: var(--asu-gold); border: 4px solid var(--asu-dk1);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--asu-dk1); font-size: 36px; padding-left: 8px;
+    }
+    .demo-cap {
+      margin-top: 22px;
+      font-family: var(--font-sans); font-size: 14px; font-weight: 700;
+      color: var(--asu-dk2); letter-spacing: 0.18em; text-transform: uppercase;
+      text-align: center;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────
+       SLIDE 5 — BUILT WITH KIRO  (3-column)
+    ───────────────────────────────────────────────────────────────── */
+    .three-col {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+      width: 100%; margin-top: 36px;
+    }
+    .kiro-card {
+      padding: 26px 22px;
+      background: var(--asu-lt1); border: 2px solid var(--asu-dk1);
+      border-radius: 4px;
+      box-shadow: 6px 6px 0 var(--asu-gold);
+      display: flex; flex-direction: column; gap: 12px;
+      min-height: 280px;
+    }
+    .kiro-card .num {
+      font-family: var(--font-sans); font-size: 44px; font-weight: 900;
+      color: var(--asu-maroon); line-height: 1;
+    }
+    .kiro-card h4 {
+      font-family: var(--font-sans); font-size: 22px; font-weight: 900;
+      color: var(--asu-dk1); letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .kiro-card p {
+      font-family: var(--font-sans); font-size: 17px; line-height: 1.55;
+      color: var(--asu-dk1);
+    }
+    .kiro-card code {
+      color: var(--asu-maroon); background: rgba(255, 198, 39, 0.25);
+      padding: 1px 5px; border-radius: 3px; font-size: 14px;
+      font-family: var(--font-mono);
+    }
+
+    /* ─────────────────────────────────────────────────────────────────
+       SLIDE 6 — WHY IT MATTERS  (impact)
+    ───────────────────────────────────────────────────────────────── */
+    .slide-impact { align-items: center; padding: 110px 80px 90px; }
+    .impact-inner { max-width: 1100px; margin: 0 auto; text-align: center; }
+    .impact-numbers {
+      display: flex; align-items: center; justify-content: center; gap: 48px;
+      margin: 36px 0;
+    }
+    .impact-num { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .impact-num .val {
+      font-family: var(--font-sans); font-size: clamp(80px, 10vw, 160px); font-weight: 900;
+      line-height: 0.9; letter-spacing: -0.03em;
+    }
+    .impact-num.before .val { color: var(--asu-dk2); text-decoration: line-through; text-decoration-thickness: 4px; text-decoration-color: var(--asu-maroon); }
+    .impact-num.after  .val { color: var(--asu-maroon); }
+    .impact-num.after  .val .gold-hl {
+      background: linear-gradient(180deg, transparent 64%, var(--asu-gold) 64%, var(--asu-gold) 94%, transparent 94%);
+      padding: 0 6px;
+    }
+    .impact-num .lbl {
+      font-family: var(--font-sans); font-size: 13px; font-weight: 700;
+      letter-spacing: 0.22em; color: var(--asu-dk2); text-transform: uppercase;
+    }
+    .impact-num .sub {
+      font-family: var(--font-sans); font-size: 15px; color: var(--asu-dk1);
+      max-width: 300px; line-height: 1.45;
+    }
+    .impact-arrow { font-family: var(--font-sans); font-weight: 900; font-size: 64px; color: var(--asu-gold); }
+    .impact-tag {
+      font-family: var(--font-sans); font-size: 24px; line-height: 1.5;
+      color: var(--asu-dk1); max-width: 980px; margin: 0 auto;
+    }
+    .impact-tag b { color: var(--asu-maroon); }
+    .impact-cite {
+      margin-top: 14px;
+      font-family: var(--font-sans); font-size: 13px; font-weight: 700;
+      color: var(--asu-dk2); letter-spacing: 0.14em; text-transform: uppercase;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────
+       SLIDE 7 — MEET THE TEAM  (mirrors template slide 9 option 2)
+    ───────────────────────────────────────────────────────────────── */
+    .slide-team { align-items: center; padding: 100px 80px 90px; }
+    .team-head { text-align: center; margin-bottom: 36px; }
+    .team-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+      width: 100%; max-width: 1100px;
+    }
+    .team-card {
+      padding: 26px 22px;
+      background: var(--asu-lt1); border: 2px solid var(--asu-dk1);
+      border-radius: 4px;
+      box-shadow: 6px 6px 0 var(--asu-maroon);
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      gap: 12px;
+    }
+    .team-photo {
+      width: 130px; height: 130px; border-radius: 50%;
+      background: var(--asu-gold); border: 3px solid var(--asu-dk1);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--asu-maroon); font-family: var(--font-sans); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      overflow: hidden;
+    }
+    .team-card .name {
+      font-family: var(--font-sans); font-size: 26px; font-weight: 900;
+      color: var(--asu-dk1); letter-spacing: 0;
+    }
+    .team-card .major {
+      font-family: var(--font-sans); font-size: 13px; font-weight: 700;
+      color: var(--asu-maroon); letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .team-card .role {
+      font-family: var(--font-sans); font-size: 16px; color: var(--asu-dk1); line-height: 1.5;
+    }
+    .signal-strip {
+      margin-top: 32px; padding: 14px 24px;
+      background: var(--asu-gold);
+      border: 2px solid var(--asu-dk1);
+      font-family: var(--font-sans); font-size: 14px; font-weight: 700;
+      color: var(--asu-dk1); letter-spacing: 0.22em; text-transform: uppercase; text-align: center;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────
+       SLIDE 8 — THANK YOU  (mirrors template slide 10)
+    ───────────────────────────────────────────────────────────────── */
+    .slide-end { align-items: center; justify-content: center; padding: 110px 80px 100px; }
+    .end-inner { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 64px; align-items: center; max-width: 1200px; }
+    .end-left .h1 { margin-bottom: 24px; }
+    .end-left .tagline {
+      font-family: var(--font-sans); font-size: 24px; line-height: 1.45;
+      color: var(--asu-dk1); max-width: 580px;
+    }
+    .cta-cmd {
+      margin-top: 28px;
+      display: inline-flex; align-items: center; gap: 12px;
+      padding: 18px 26px;
+      background: var(--asu-dk1); border-radius: 6px;
+    }
+    .cta-cmd .prompt { color: var(--asu-gold); font-weight: 700; font-family: var(--font-mono); font-size: 22px; }
+    .cta-cmd .cmd    { color: #fff; font-family: var(--font-mono); font-size: 22px; }
+    .repo-line {
+      margin-top: 22px;
+      font-family: var(--font-sans); font-size: 16px; font-weight: 700;
+      color: var(--asu-dk2); letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .repo-line b { color: var(--asu-maroon); font-weight: 900; }
+
+    .end-right { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .qr-frame {
+      width: 220px; height: 220px;
+      border: 3px solid var(--asu-dk1); border-radius: 6px;
+      background: var(--asu-lt1);
+      box-shadow: 8px 8px 0 var(--asu-gold);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--asu-dk2); font-family: var(--font-sans); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase; text-align: center;
+      padding: 10px;
+    }
+    .qr-cap {
+      font-family: var(--font-sans); font-size: 13px; font-weight: 700;
+      color: var(--asu-dk2); letter-spacing: 0.18em; text-transform: uppercase;
+    }
+
+    /* ── Print export ────────────────────────────────────────────── */
+    @media print {
+      .hud, .notes { display: none !important; }
+      html, body { overflow: visible; height: auto; }
+      .deck { display: block; overflow: visible; height: auto; }
+      .slide { width: 100vw; height: 56.25vw; max-height: 100vh; page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="deck" id="deck">
+
+    <!-- ════════════════ SLIDE 1 — TITLE ════════════════
+         Mirrors template slide 7 / layout 50:
+         · ASU logo top-left
+         · Project mark top-right
+         · Title bottom-left rising
+         · Maroon + gold accent bars
+    -->
+    <section class="slide slide-title" data-notes="Hi, we're Team [Name]. This is The Colosseum — an adversarial trial-by-fire for the code that's about to touch your database. We're competing on the Education frame.">
+      <img class="asu-mark" src="./pitch-assets/asu-logo.png" alt="Arizona State University" />
+      <div class="project-mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+          <line x1="13" y1="19" x2="19" y2="13" />
+          <line x1="16" y1="16" x2="20" y2="20" />
+          <line x1="19" y1="21" x2="21" y2="19" />
+          <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
+          <line x1="5" y1="14" x2="9" y2="18" />
+          <line x1="7" y1="17" x2="4" y2="20" />
+          <line x1="3" y1="19" x2="5" y2="21" />
+        </svg>
+        THE COLOSSEUM
+      </div>
+
+      <p class="eyebrow">Kiro Spark Challenge · Education Frame</p>
+      <h1 class="h1">THE <span class="maroon">COLOSSEUM</span></h1>
+      <p class="tagline">An adversarial trial-by-fire for the code that's about to touch your database.</p>
+      <p class="team-line">TEAM: <span>[Name 1] · [Name 2] · [Name 3]</span></p>
+
+      <div class="maroon-bar"></div>
+      <div class="gold-bar"></div>
+    </section>
+
+    <!-- ════════════════ SLIDE 2 — THE PROBLEM ════════════════ -->
+    <section class="slide slide-content" data-notes="Here's what changed in the last 18 months. AI tools — Cursor, Copilot, Claude Code — made juniors three to five times more productive. Senior reviewer bandwidth didn't scale. The bugs that USED to be caught in review are now landing downstream. For most code that's tolerable. For database code — those mistakes don't roll back.">
+      <img class="asu-mark" src="./pitch-assets/asu-logo.png" alt="Arizona State University" />
+      <p class="deck-meta"><b>The Colosseum</b> · Kiro Spark Challenge</p>
+      <p class="page-num"><b>02</b> / 08</p>
+
+      <div class="two-col">
+        <div>
+          <p class="eyebrow">// The Gap That Opened</p>
+          <h2 class="h2">AI made juniors faster.<br/><span class="gold-hl">Reviewers didn't.</span></h2>
+          <ul class="bullet-list">
+            <li>AI tools → <b>3–5×</b> more code per junior per day</li>
+            <li>Senior reviewer bandwidth <b>didn't scale</b></li>
+            <li>Bugs that used to be caught in review now land <em>downstream</em></li>
+            <li>For CSS that's fine. For database code — <em>those mistakes don't roll back</em>.</li>
+          </ul>
+        </div>
+        <div class="cascade">
+          <div class="cascade-title">Today · The Review Cascade</div>
+          <div class="cascade-step"><div class="label">Day 0</div><div class="meta">Junior writes 15 lines of risky SQL</div></div>
+          <div class="cascade-arrow">↓</div>
+          <div class="cascade-step warn"><div class="label">Day 1 · 23 min refocus</div><div class="meta">Senior interrupted from deep work</div></div>
+          <div class="cascade-arrow">↓</div>
+          <div class="cascade-step"><div class="label">Day 1 · Context lost</div><div class="meta">Junior switches back, reads comments cold</div></div>
+          <div class="cascade-arrow">↓</div>
+          <div class="cascade-step warn"><div class="label">Day 2 · Re-review</div><div class="meta">Senior interrupted again</div></div>
+          <div class="cascade-cost">
+            <b>5 days</b> of latency · <b>2 engineers'</b> attention · <b>1 stressed junior</b><br/>
+            All for fifteen lines of SQL.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ SLIDE 3 — THE SOLUTION ════════════════ -->
+    <section class="slide slide-content" data-notes="Colosseum runs your code through five adversarial Gladiator agents in sixty seconds, locally, before it leaves your machine. You see what would have happened — then a flashcard trial teaches you why. Critically, the AI never writes your fix. That's the Education frame guardrail. The AI is scaffolding. You write the fix.">
+      <img class="asu-mark" src="./pitch-assets/asu-logo.png" alt="Arizona State University" />
+      <p class="deck-meta"><b>The Colosseum</b> · Kiro Spark Challenge</p>
+      <p class="page-num"><b>03</b> / 08</p>
+
+      <div class="two-col">
+        <div>
+          <p class="eyebrow">// What It Is</p>
+          <h2 class="h2">A 60-second trial. <br/><span class="gold-hl">Before the push.</span></h2>
+          <ul class="bullet-list">
+            <li><b>5 Gladiator sub-agents</b> stress-test your code in isolation</li>
+            <li>A scoreboard tells you <b>what would have happened</b></li>
+            <li>The arena hands off to a <b>Learn Why</b> trial — coming up next</li>
+            <li>Local · private · no senior interrupted · no incident logged</li>
+          </ul>
+          <div class="pull-quote">
+            "<span class="maroon">Trial first.</span> Then the lesson."
+            <span class="small">— The Colosseum Loop —</span>
+          </div>
+        </div>
+        <div>
+          <div class="device-frame">
+            <div class="placeholder">
+              [ ARENA DASHBOARD SCREENSHOT ]
+              <small>replace with: screenshots/arena-live.png</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ SLIDE 4 — HOW IT TEACHES (Education hero) ════════════════
+         The Education-frame anchor slide. Three pedagogical pillars +
+         a real product mock of the Learn Why MCQ flashcard.
+    -->
+    <section class="slide slide-content" data-notes="This is the education engine. Three principles. WHEN — we catch the mistake while working memory is still warm. WHAT — we test the concept with multiple-choice questions. The AI never types the fix. That's the guardrail. HOW — trial, learn, re-trial. You don't ship until you've proven you understand. We're not replacing senior review. We're teaching the lesson senior review used to teach — five days earlier, in the moment.">
+      <img class="asu-mark" src="./pitch-assets/asu-logo.png" alt="Arizona State University" />
+      <p class="deck-meta"><b>The Colosseum</b> · Kiro Spark Challenge</p>
+      <p class="page-num"><b>04</b> / 09</p>
+
+      <div style="text-align: center; padding-top: 8px;">
+        <p class="eyebrow">// The Education Engine</p>
+        <h2 class="h2">We move the lesson <span class="gold-hl">to the moment.</span></h2>
+      </div>
+
+      <div class="edu-grid" style="margin-top: 32px;">
+        <!-- LEFT: Three pedagogical principles -->
+        <div class="principle-stack">
+          <div class="principle">
+            <div class="marker">When</div>
+            <div>
+              <h4>Lesson hits in the <span class="gold-hl">working-memory window.</span></h4>
+              <p>The student sees the failure seconds after writing the line — not five days and four reviewers later. The mental context is still loaded.<span class="cite">Mark · UC Irvine · 23-min refocus cost when learning is delayed</span></p>
+            </div>
+          </div>
+          <div class="principle">
+            <div class="marker">What</div>
+            <div>
+              <h4><span class="gold-hl">Concepts.</span> Not solutions.</h4>
+              <p>Three multiple-choice questions probe <i>why</i> the code fell — not what to type. The AI never writes the fix. The student must reason their way back to safe code.<span class="cite">Retrieval practice · Productive struggle</span></p>
+            </div>
+          </div>
+          <div class="principle">
+            <div class="marker">How</div>
+            <div>
+              <h4>Trial → Learn → <span class="gold-hl">Re-trial.</span></h4>
+              <p>Pass the trial on your own. Re-run <code style="font-family: var(--font-mono); font-size: 14px; background: rgba(255, 198, 39, 0.25); padding: 1px 5px; border-radius: 2px; color: var(--asu-maroon);">npx colosseum</code> to confirm. You don't ship until you've proven the lesson stuck.<span class="cite">Deliberate practice · Immediate feedback loop</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Mock of the actual Learn Why MCQ flashcard -->
+        <div class="mcq-mock">
+          <div class="mcq-head">
+            <span class="trial">⚜ Trial 2 of 3</span>
+            <span class="brand">Learn Why</span>
+          </div>
+          <div class="mcq-finding">// The arena flagged this query —</div>
+          <div class="mcq-code">db.query(<span class="red">`SELECT * FROM users
+   WHERE email='${req.body.email}'`</span>)</div>
+          <div class="mcq-q">Why did the gladiators fall on this query?</div>
+          <div class="mcq-options">
+            <div class="mcq-opt"><span class="dot"></span><span class="letter">A·</span> It uses SELECT *</div>
+            <div class="mcq-opt selected"><span class="dot"></span><span class="letter">B·</span> User input is interpolated into SQL</div>
+            <div class="mcq-opt"><span class="dot"></span><span class="letter">C·</span> It's missing a LIMIT clause</div>
+            <div class="mcq-opt"><span class="dot"></span><span class="letter">D·</span> The email column has no index</div>
+          </div>
+          <div class="mcq-cta">⚜ Lock In Answer</div>
+          <div class="mcq-guard">— The AI Will Not Show You The Fix —</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ SLIDE 5 — DEMO ════════════════ -->
+    <section class="slide slide-demo" data-notes="(TALK OVER THE DEMO VIDEO AS IT PLAYS)&#10;&#10;So here's a junior about to push code with a SQL injection. They run npx colosseum.&#10;&#10;The arena opens. Five gladiators light up — each tests for a different attack class. Watch — the SQL injector falls. The verdict drops: THE ARENA HAS SPOKEN.&#10;&#10;They click Learn Why. Three multiple-choice questions hit them about why their query was broken. Notice — the AI never showed them the fix. They have to figure it out themselves.&#10;&#10;That's the lesson landing in the moment they wrote the code, while their working memory is still warm.">
+      <img class="asu-mark" src="./pitch-assets/asu-logo.png" alt="Arizona State University" />
+      <p class="deck-meta"><b>The Colosseum</b> · Kiro Spark Challenge</p>
+      <p class="page-num"><b>05</b> / 09</p>
+
+      <div class="demo-head">
+        <p class="eyebrow">// Live Demo</p>
+        <h1 class="h1">WATCH IT <span class="maroon">FAIL.</span></h1>
+      </div>
+      <div class="video-frame">
+        <div class="play-icon">▶</div>
+      </div>
+      <p class="demo-cap">[ Demo video — 60–75 seconds — embed YouTube link via Insert → Video ]</p>
+    </section>
+
+    <!-- ════════════════ SLIDE 5 — BUILT WITH KIRO ════════════════ -->
+    <section class="slide slide-content" data-notes="We used Kiro three ways. First, the project itself IS a custom MCP server — Kiro can summon the gladiators like any other tool. Second, a pre-push agent hook fires the trial automatically when risky code is about to leave the machine. Third, the entire architecture started as a spec — the gladiator names, the educational guardrails, even the honesty pills in the UI all trace back to one architecture document in the repo.">
+      <img class="asu-mark" src="./pitch-assets/asu-logo.png" alt="Arizona State University" />
+      <p class="deck-meta"><b>The Colosseum</b> · Kiro Spark Challenge</p>
+      <p class="page-num"><b>06</b> / 09</p>
+
+      <div style="text-align: center; padding-top: 12px;">
+        <p class="eyebrow">// How We Used Kiro</p>
+        <h2 class="h2">Three layers of <span class="gold-hl">Kiro.</span></h2>
+      </div>
+      <div class="three-col">
+        <div class="kiro-card">
+          <div class="num">01</div>
+          <h4>MCP Server</h4>
+          <p><code>colosseum-mcp</code> exposes custom tools — <code>create_shadow_clone</code>, <code>release_gladiators</code>, <code>score_arena</code>. Kiro summons the gladiators like any other MCP.</p>
+        </div>
+        <div class="kiro-card">
+          <div class="num">02</div>
+          <h4>Agent Hooks</h4>
+          <p>A <code>pre-push</code> hook intercepts risky code before it leaves the machine. Trial fires automatically — no extra command needed.</p>
+        </div>
+        <div class="kiro-card">
+          <div class="num">03</div>
+          <h4>Spec-Driven Dev</h4>
+          <p>Every gladiator, every guardrail, every honesty pill in the UI traces back to <code>ARCHITECTURE_SPEC.md</code>. Kiro built the system the spec described.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ SLIDE 6 — WHY IT MATTERS ════════════════ -->
+    <section class="slide slide-impact" data-notes="We don't claim to prevent million-dollar disasters — those are rare and well-handled. The everyday cost we're collapsing is the review chain itself. Today, fifteen lines of risky SQL get looked at by four people across five days. With Colosseum, the same code is tried, taught, and fixed locally in sixty seconds. Senior attention is the bottleneck of every engineering org — and we give it back.">
+      <img class="asu-mark" src="./pitch-assets/asu-logo.png" alt="Arizona State University" />
+      <p class="deck-meta"><b>The Colosseum</b> · Kiro Spark Challenge</p>
+      <p class="page-num"><b>07</b> / 09</p>
+
+      <div class="impact-inner">
+        <p class="eyebrow">// Impact</p>
+        <h2 class="h2">We restore a learning loop <br/><span class="gold-hl">AI quietly broke.</span></h2>
+        <div class="impact-numbers">
+          <div class="impact-num before">
+            <div class="val">5d</div>
+            <div class="lbl">Today</div>
+            <div class="sub">review chain · 4 people · 1 stressed junior</div>
+          </div>
+          <div class="impact-arrow">→</div>
+          <div class="impact-num after">
+            <div class="val"><span class="gold-hl">60s</span></div>
+            <div class="lbl">With Colosseum</div>
+            <div class="sub">local trial · lesson lands while working memory is warm</div>
+          </div>
+        </div>
+        <p class="impact-tag">
+          We're not preventing million-dollar disasters — those are rare. We're collapsing the
+          <b>everyday five-day cascade</b> into a sixty-second local loop.
+          The senior never has to be pulled in. Nobody else has to look at the same fifteen lines four times.
+        </p>
+        <p class="impact-cite">Every roundtrip ≈ 23 min of senior deep-work · Mark, UC Irvine</p>
+      </div>
+    </section>
+
+    <!-- ════════════════ SLIDE 7 — MEET THE TEAM ════════════════
+         Mirrors template slide 9 (Meet the Team — Option 2)
+    -->
+    <section class="slide slide-team" data-notes="We're a team of three from [school / program]. We're submitting on the Story signal and the Education frame.">
+      <img class="asu-mark" src="./pitch-assets/asu-logo.png" alt="Arizona State University" />
+      <p class="deck-meta"><b>The Colosseum</b> · Kiro Spark Challenge</p>
+      <p class="page-num"><b>08</b> / 09</p>
+
+      <div class="team-head">
+        <p class="eyebrow">// The Team</p>
+        <h2 class="h2">Meet the <span class="gold-hl">team.</span></h2>
+      </div>
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="team-photo">[ PHOTO ]</div>
+          <div class="name">[ Name 1 ]</div>
+          <div class="major">[ Major ]</div>
+          <div class="role">[ Project role ]</div>
+        </div>
+        <div class="team-card">
+          <div class="team-photo">[ PHOTO ]</div>
+          <div class="name">[ Name 2 ]</div>
+          <div class="major">[ Major ]</div>
+          <div class="role">[ Project role ]</div>
+        </div>
+        <div class="team-card">
+          <div class="team-photo">[ PHOTO ]</div>
+          <div class="name">[ Name 3 ]</div>
+          <div class="major">[ Major ]</div>
+          <div class="role">[ Project role ]</div>
+        </div>
+      </div>
+      <div class="signal-strip">
+        Competing on · Story Signal · Education Frame
+      </div>
+    </section>
+
+    <!-- ════════════════ SLIDE 8 — THANK YOU ════════════════
+         Mirrors template slide 10 (Thank you slide with QR)
+    -->
+    <section class="slide slide-end" data-notes="Thank you. Try it yourself with npx colosseum. Repo's on GitHub. Questions?">
+      <img class="asu-mark" src="./pitch-assets/asu-logo.png" alt="Arizona State University" />
+      <p class="deck-meta"><b>The Colosseum</b> · Kiro Spark Challenge</p>
+      <p class="page-num"><b>09</b> / 09</p>
+
+      <div class="end-inner">
+        <div class="end-left">
+          <p class="eyebrow">// Thank You</p>
+          <h1 class="h1">Thank <span class="maroon">you.</span></h1>
+          <p class="tagline">The arena is open. Try it the next time you're about to push something risky.</p>
+          <div class="cta-cmd">
+            <span class="prompt">$</span>
+            <span class="cmd">npx colosseum</span>
+          </div>
+          <p class="repo-line">REPO &nbsp;·&nbsp; <b>github.com/[handle]/colosseum</b></p>
+        </div>
+        <div class="end-right">
+          <div class="qr-frame">[ QR CODE → GITHUB REPO ]</div>
+          <p class="qr-cap">Scan to try the arena</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- HUD (preview only — hidden when exported to PDF/PPTX) -->
+  <div class="hud">
+    <button id="prev" aria-label="Previous slide">←</button>
+    <span class="count"><span id="cur">1</span> <span class="sep">/</span> <span id="tot">8</span></span>
+    <button id="next" aria-label="Next slide">→</button>
+    <span class="sep">·</span>
+    <button id="notes-toggle" aria-label="Toggle speaker notes">N · NOTES</button>
+  </div>
+
+  <!-- Speaker notes drawer -->
+  <aside class="notes" id="notes">
+    <h3>Speaker Notes</h3>
+    <div class="body" id="notes-body"></div>
+    <div class="meta" id="notes-meta"></div>
+  </aside>
+
+  <script>
+    const deck = document.getElementById('deck');
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const cur = document.getElementById('cur');
+    const tot = document.getElementById('tot');
+    const notes = document.getElementById('notes');
+    const notesBody = document.getElementById('notes-body');
+    const notesMeta = document.getElementById('notes-meta');
+    tot.textContent = slides.length;
+
+    let index = 0;
+    function refreshNotes() {
+      const note = slides[index].dataset.notes || '(no notes for this slide)';
+      notesBody.textContent = note;
+      const wc = note.split(/\s+/).filter(Boolean).length;
+      const sec = Math.round((wc / 135) * 60);
+      notesMeta.textContent = `${wc} words · ~${sec}s spoken`;
+    }
+    function go(i) {
+      index = Math.max(0, Math.min(slides.length - 1, i));
+      slides[index].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+      cur.textContent = index + 1;
+      refreshNotes();
+    }
+    document.getElementById('prev').addEventListener('click', () => go(index - 1));
+    document.getElementById('next').addEventListener('click', () => go(index + 1));
+    document.getElementById('notes-toggle').addEventListener('click', () => notes.classList.toggle('open'));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(index + 1); }
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                    { e.preventDefault(); go(index - 1); }
+      if (e.key.toLowerCase() === 'n') notes.classList.toggle('open');
+      if (e.key === 'Home') go(0);
+      if (e.key === 'End')  go(slides.length - 1);
+    });
+
+    // Sync index when user scrolls manually
+    deck.addEventListener('scroll', () => {
+      const i = Math.round(deck.scrollLeft / window.innerWidth);
+      if (i !== index) {
+        index = i;
+        cur.textContent = index + 1;
+        refreshNotes();
+      }
+    });
+
+    go(0);
+  </script>
+</body>
+</html>

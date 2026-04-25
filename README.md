@@ -40,6 +40,28 @@ Your production database is never touched.
 
 ---
 
+## Configuration
+
+Everything below is **optional** — the CLI degrades gracefully and the
+`--demo` flag will run the full arena animation with zero setup.
+
+```bash
+# In any repo where you want to use the CLI:
+cp colosseum-cli/.env.example .env
+# then edit .env to add any keys you have
+```
+
+| Variable | Effect when set | Effect when unset |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Learn-Why MCQs generated live by Claude | Falls back to `OPENAI_API_KEY`, then to the template bank |
+| `OPENAI_API_KEY` | Learn-Why MCQs generated live by GPT | Falls back to the template bank |
+| `DATABASE_URL` + `NEON_API_KEY` + `NEON_PROJECT_ID` | Real Neon shadow branch — gladiators run actual probes | Arena runs in scripted DEMO MODE (no DB touched) |
+
+> Never commit a real `.env` — the project's own scanner would flag your push.
+> A `.gitignore` is shipped that excludes `.env*` (but keeps `.env.example`).
+
+---
+
 ## Hackathon
 
 Built at Kiro Spark Challenge under the Education track.

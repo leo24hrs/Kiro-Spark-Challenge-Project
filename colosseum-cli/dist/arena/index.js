@@ -156,15 +156,22 @@ async function runRollbackReaper(cloneUrl, command) {
     }
 }
 // Orchestrator
-export async function runArena(databaseUrl, sqlCommand, developerId) {
+const GLADIATOR_ROSTER = [
+    { id: 1, name: 'The Stampede', run: runStampede },
+    { id: 2, name: 'The Cascade', run: runCascade },
+    { id: 3, name: 'The Injector', run: runInjector },
+    { id: 4, name: 'The Load Breaker', run: runLoadBreaker },
+    { id: 5, name: 'The Rollback Reaper', run: runRollbackReaper },
+];
+export async function runArena(databaseUrl, sqlCommand, developerId, callbacks = {}) {
     const branchName = `colosseum-cli-${Date.now()}`;
     const clone = await createShadowClone(branchName);
     if (clone.status === 'failed') {
         throw new Error('Failed to create shadow clone. Check NEON_API_KEY and NEON_PROJECT_ID.');
     }
     const { clone_url, branch_id } = clone;
+    callbacks.onCloneReady?.(branch_id);
     try {
-        // Execute command on clone
         const execClient = new pg.Client({ connectionString: clone_url });
         try {
             await execClient.connect();
@@ -173,17 +180,33 @@ export async function runArena(databaseUrl, sqlCommand, developerId) {
         finally {
             await execClient.end();
         }
-        // Run all 5 gladiators in parallel
-        const settled = await Promise.allSettled([
-            runStampede(clone_url, sqlCommand),
-            runCascade(clone_url, sqlCommand),
-            runInjector(clone_url, sqlCommand),
-            runLoadBreaker(clone_url, sqlCommand),
-            runRollbackReaper(clone_url, sqlCommand),
-        ]);
+        // Run all 5 gladiators in parallel, narrating each as it starts and finishes.
+        const settled = await Promise.allSettled(GLADIATOR_ROSTER.map(async ({ id, name, run }) => {
+            callbacks.onGladiatorStart?.(id, name);
+            try {
+                const result = await run(clone_url, sqlCommand);
+                callbacks.onGladiatorDone?.(id, name, result);
+                return result;
+            }
+            catch (err) {
+                const failure = {
+                    gladiator_name: name,
+                    survived: false,
+                    damage_report: String(err),
+                    severity: 'critical',
+                };
+                callbacks.onGladiatorDone?.(id, name, failure);
+                return failure;
+            }
+        }));
         const gladiatorResults = settled.map((outcome, idx) => outcome.status === 'fulfilled'
             ? outcome.value
-            : { gladiator_name: `Gladiator ${idx + 1}`, survived: false, damage_report: String(outcome.reason), severity: 'critical' });
+            : {
+                gladiator_name: GLADIATOR_ROSTER[idx].name,
+                survived: false,
+                damage_report: String(outcome.reason),
+                severity: 'critical',
+            });
         const severityOrder = ['low', 'medium', 'high', 'critical'];
         const overallSeverity = gladiatorResults.reduce((acc, r) => severityOrder.indexOf(r.severity) > severityOrder.indexOf(acc) ? r.severity : acc, 'low');
         return {

@@ -151,11 +151,40 @@ async function runRollbackReaper(cloneUrl: string, command: string): Promise<Gla
 
 // Orchestrator
 
+const GLADIATOR_ROSTER: Array<{
+  id: number;
+  name: string;
+  run: (cloneUrl: string, command: string) => Promise<GladiatorResult>;
+}> = [
+  { id: 1, name: 'The Stampede',         run: runStampede },
+  { id: 2, name: 'The Cascade',          run: runCascade },
+  { id: 3, name: 'The Injector',         run: runInjector },
+  { id: 4, name: 'The Load Breaker',     run: runLoadBreaker },
+  { id: 5, name: 'The Rollback Reaper',  run: runRollbackReaper },
+];
+
+export interface ArenaCallbacks {
+  onCloneReady?: (branchId: string) => void;
+  onGladiatorStart?: (id: number, name: string) => void;
+  onGladiatorDone?: (id: number, name: string, result: GladiatorResult) => void;
+}
+
+/**
+ * Internal arena result — omits the visualisation-only fields (vulnerabilities,
+ * files_scanned, timeline, arena_ran, session_id, elapsed_ms) which the CLI
+ * layer composes once the arena has completed.
+ */
+type CoreArenaResult = Omit<
+  ArenaResult,
+  'vulnerabilities' | 'files_scanned' | 'timeline' | 'arena_ran' | 'demo_mode' | 'session_id' | 'elapsed_ms' | 'mcqs' | 'mcq_source'
+>;
+
 export async function runArena(
   databaseUrl: string,
   sqlCommand: string,
   developerId: string,
-): Promise<ArenaResult> {
+  callbacks: ArenaCallbacks = {},
+): Promise<CoreArenaResult> {
   const branchName = `colosseum-cli-${Date.now()}`;
   const clone = await createShadowClone(branchName);
 
@@ -164,9 +193,9 @@ export async function runArena(
   }
 
   const { clone_url, branch_id } = clone;
+  callbacks.onCloneReady?.(branch_id);
 
   try {
-    // Execute command on clone
     const execClient = new pg.Client({ connectionString: clone_url });
     try {
       await execClient.connect();
@@ -175,19 +204,36 @@ export async function runArena(
       await execClient.end();
     }
 
-    // Run all 5 gladiators in parallel
-    const settled = await Promise.allSettled([
-      runStampede(clone_url, sqlCommand),
-      runCascade(clone_url, sqlCommand),
-      runInjector(clone_url, sqlCommand),
-      runLoadBreaker(clone_url, sqlCommand),
-      runRollbackReaper(clone_url, sqlCommand),
-    ]);
+    // Run all 5 gladiators in parallel, narrating each as it starts and finishes.
+    const settled = await Promise.allSettled(
+      GLADIATOR_ROSTER.map(async ({ id, name, run }) => {
+        callbacks.onGladiatorStart?.(id, name);
+        try {
+          const result = await run(clone_url, sqlCommand);
+          callbacks.onGladiatorDone?.(id, name, result);
+          return result;
+        } catch (err) {
+          const failure: GladiatorResult = {
+            gladiator_name: name,
+            survived: false,
+            damage_report: String(err),
+            severity: 'critical',
+          };
+          callbacks.onGladiatorDone?.(id, name, failure);
+          return failure;
+        }
+      }),
+    );
 
     const gladiatorResults: GladiatorResult[] = settled.map((outcome, idx) =>
       outcome.status === 'fulfilled'
         ? outcome.value
-        : { gladiator_name: `Gladiator ${idx + 1}`, survived: false, damage_report: String((outcome as PromiseRejectedResult).reason), severity: 'critical' as const }
+        : {
+            gladiator_name: GLADIATOR_ROSTER[idx]!.name,
+            survived: false,
+            damage_report: String((outcome as PromiseRejectedResult).reason),
+            severity: 'critical' as const,
+          }
     );
 
     const severityOrder = ['low', 'medium', 'high', 'critical'];

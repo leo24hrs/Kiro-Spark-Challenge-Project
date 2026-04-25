@@ -1,0 +1,28 @@
+# ── Secrets ────────────────────────────────────────────────────────────
+# Never commit a real .env. The whole point of this project is catching
+# leaked credentials — getting bitten by your own tool would be ironic.
+.env
+.env.*
+!.env.example
+
+# ── Build output ───────────────────────────────────────────────────────
+dist/
+build/
+*.tsbuildinfo
+
+# ── Dependencies ───────────────────────────────────────────────────────
+node_modules/
+
+# ── Logs ───────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── OS / editor cruft ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
